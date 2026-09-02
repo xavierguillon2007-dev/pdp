@@ -1,4 +1,4 @@
-# Le Journal — site Supabase
+# Pen-Seurs de Plaies — site Supabase
 
 ## 1. Configuration
 Ouvre `config.js` et remplace :

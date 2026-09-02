@@ -13,7 +13,7 @@ window.Journal = (() => {
     return m ? `https://www.youtube.com/embed/${m[1]}` : null;
   };
   const demoArticles = [
-    {id:"demo1",title:"Bienvenue dans Le Journal",slug:"bienvenue-dans-le-journal",excerpt:"Un nouvel espace pour retrouver nos actualités, dossiers, images et vidéos.",content:"<p>Bienvenue dans <strong>Le Journal</strong>. Cette démonstration vous montre l’organisation du site.</p>",status:"published",published_at:new Date().toISOString(),cover_image:null,categories:{name:"Actualités"},author:{email:"Rédaction"}},
+    {id:"demo1",title:"Bienvenue dans Pen-Seurs de Plaies",slug:"bienvenue-dans-le-journal",excerpt:"Un nouvel espace pour retrouver nos actualités, dossiers, images et vidéos.",content:"<p>Bienvenue dans <strong>Pen-Seurs de Plaies</strong>. Cette démonstration vous montre l’organisation du site.</p>",status:"published",published_at:new Date().toISOString(),cover_image:null,categories:{name:"Actualités"},author:{email:"Rédaction"}},
     {id:"demo2",title:"Un journal pensé pour la lecture",slug:"un-journal-pense-pour-la-lecture",excerpt:"Une présentation claire, des articles confortables à lire et des médias intégrés.",content:"<p>Les articles sont conçus pour une lecture agréable sur ordinateur comme sur téléphone.</p>",status:"published",published_at:new Date(Date.now()-86400000).toISOString(),cover_image:null,categories:{name:"Dossiers"},author:{email:"Rédaction"}}
   ];
 
@@ -60,7 +60,7 @@ window.Journal = (() => {
     if(client){ const r=await client.from("articles").select("*, categories(name)").eq("id",id).single(); a=r.data; }
     else a=demoArticles.find(x=>x.id===id)||demoArticles[0];
     if(!a){document.getElementById("article").innerHTML="<div class='empty'>Article introuvable.</div>";return}
-    document.title=`${a.title} — Le Journal`;
+    document.title=`${a.title} — Pen-Seurs de Plaies`;
     const embed=yt(a.youtube_url||a.youtube);
     document.getElementById("article").innerHTML=`<div class="article-head"><span class="tag">${esc(a.categories?.name||"Actualités")}</span><h1>${esc(a.title)}</h1><div class="muted">${fmt(a.published_at)}</div></div>${a.cover_image?`<img class="article-cover" src="${esc(a.cover_image)}" alt="">`:''}<div class="article-content">${a.content||""}${embed?`<div class="youtube-wrap"><iframe src="${embed}" title="Vidéo YouTube" allowfullscreen></iframe></div>`:''}</div>`;
   }
