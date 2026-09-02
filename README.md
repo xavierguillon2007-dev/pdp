@@ -3,14 +3,14 @@
 ## 1. Configuration
 Ouvre `config.js` et remplace :
 - `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
+- `SUPABASE_PUBLISHABLE_KEY`
 
 par les valeurs de ton projet Supabase.
 
 ## 2. Base de données
 Dans Supabase > SQL Editor, colle tout le contenu de `supabase.sql` et exécute-le.
 
-Puis crée un compte dans Supabase > Authentication > Users (ou via ton futur formulaire de création de compte).
+Puis utilise `signup.html` pour créer les comptes directement depuis le site. Le compte peut ensuite être ajouté comme administrateur via son UUID dans `admin_users`.
 
 Ajoute ce compte comme administrateur avec :
 ```sql
@@ -27,3 +27,10 @@ Dans l'administration, colle une URL YouTube dans "Vidéo YouTube". Le site tran
 
 ## 5. Hébergement
 Le projet est un site statique : il peut être hébergé sur Vercel, Netlify, GitHub Pages, ou un hébergement web classique.
+
+
+## 6. Création de compte et confirmation e-mail
+Le formulaire `signup.html` utilise Supabase Auth. Si la confirmation d’e-mail est activée dans Supabase, le membre reçoit un e-mail et doit confirmer son adresse avant de se connecter. Dans Supabase > Authentication > URL Configuration, ajoute l’URL de ton site (et éventuellement l’URL de redirection `.../login.html`).
+
+## 7. Clé API
+Pour un site web, utilise la Publishable key (`sb_publishable_...`). Ne mets jamais une Secret key (`sb_secret_...`) ou une clé `service_role` dans le code du site.

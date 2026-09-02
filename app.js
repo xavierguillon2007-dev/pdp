@@ -1,7 +1,8 @@
 window.Journal = (() => {
   let client = null;
-  const cfgOk = window.SUPABASE_URL && !window.SUPABASE_URL.includes("TON-PROJET") && window.SUPABASE_ANON_KEY && !window.SUPABASE_ANON_KEY.includes("TA_CLE");
-  if (window.supabase && cfgOk) client = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+  const supabaseKey = window.SUPABASE_PUBLISHABLE_KEY || window.SUPABASE_ANON_KEY || "";
+  const cfgOk = window.SUPABASE_URL && !window.SUPABASE_URL.includes("TON-PROJET") && supabaseKey && !supabaseKey.includes("TA_CLE");
+  if (window.supabase && cfgOk) client = window.supabase.createClient(window.SUPABASE_URL, supabaseKey);
 
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const fmt = d => d ? new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'long',year:'numeric'}).format(new Date(d)) : "";
@@ -69,13 +70,51 @@ window.Journal = (() => {
     const {data}=await client.from("admin_users").select("user_id").eq("user_id",u.id).maybeSingle(); return !!data;
   }
   async function showAdminLink(){if(await isAdmin()) document.querySelectorAll("#adminLink").forEach(x=>x.hidden=false);}
+  function authErrorMessage(error){
+    const m=String(error?.message||error||"");
+    if(m.toLowerCase().includes("email not confirmed")) return "Ton adresse e-mail n’est pas encore confirmée. Vérifie ta boîte mail, puis réessaie.";
+    if(m.toLowerCase().includes("invalid login credentials")) return "E-mail ou mot de passe incorrect.";
+    if(m.toLowerCase().includes("email rate limit")) return "Trop de tentatives. Attends quelques instants avant de réessayer.";
+    return m || "Une erreur est survenue.";
+  }
   async function login(){
-    if(!client){document.getElementById("loginMsg").textContent="Configure d’abord config.js avec les clés de ton projet Supabase.";return}
-    document.getElementById("loginForm").addEventListener("submit",async e=>{
+    const form=document.getElementById("loginForm"); if(!form)return;
+    if(!client){document.getElementById("loginMsg").textContent="Configure d’abord config.js avec l’URL et la Publishable key de ton projet Supabase.";return}
+    form.addEventListener("submit",async e=>{
       e.preventDefault(); const msg=document.getElementById("loginMsg"); msg.textContent="Connexion…";
-      const {error}=await client.auth.signInWithPassword({email:email.value,password:password.value});
-      if(error){msg.textContent=error.message;return}
-      location.href=await isAdmin()?"admin.html":"index.html";
+      const emailValue=document.getElementById("email").value.trim();
+      const passwordValue=document.getElementById("password").value;
+      const {data,error}=await client.auth.signInWithPassword({email:emailValue,password:passwordValue});
+      if(error){msg.textContent=authErrorMessage(error);return}
+      location.href=(data.user && await isAdmin())?"admin.html":"index.html";
+    });
+  }
+  async function signup(){
+    const form=document.getElementById("signupForm"); if(!form)return;
+    if(!client){document.getElementById("signupMsg").textContent="Configure d’abord config.js avec l’URL et la Publishable key de ton projet Supabase.";return}
+    form.addEventListener("submit",async e=>{
+      e.preventDefault(); const msg=document.getElementById("signupMsg"); msg.textContent="Création du compte…";
+      const firstName=document.getElementById("firstName").value.trim();
+      const lastName=document.getElementById("lastName").value.trim();
+      const emailValue=document.getElementById("signupEmail").value.trim();
+      const password=document.getElementById("signupPassword").value;
+      const password2=document.getElementById("signupPassword2").value;
+      if(password!==password2){msg.textContent="Les deux mots de passe ne correspondent pas.";return}
+      const {data,error}=await client.auth.signUp({
+        email:emailValue, password,
+        options:{
+          data:{first_name:firstName,last_name:lastName},
+          emailRedirectTo:`${location.origin}/login.html`
+        }
+      });
+      if(error){msg.textContent=authErrorMessage(error);return}
+      if(data.session){
+        msg.textContent="Compte créé ! Redirection…";
+        location.href="index.html";
+      }else{
+        msg.textContent="Compte créé ! Vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi.";
+        form.reset();
+      }
     });
   }
   async function admin(){
@@ -111,6 +150,6 @@ window.Journal = (() => {
   }
   async function deleteArticle(id){if(!confirm("Supprimer définitivement cet article ?"))return;const {error}=await client.from("articles").delete().eq("id",id);if(error)alert(error.message);else loadAdminData()}
   function clearEditor(){document.getElementById("articleForm").reset();document.getElementById("articleId").value="";document.getElementById("coverPreview").innerHTML="";document.getElementById("coverPreview").dataset.url="";document.getElementById("editorTitle").textContent="Nouvel article"}
-  return {home,listPage,readArticle,login,admin,editArticle,deleteArticle,clearEditor,newArticle:clearEditor,showAdminLink};
+  return {home,listPage,readArticle,login,signup,admin,editArticle,deleteArticle,clearEditor,newArticle:clearEditor,showAdminLink};
 })();
 document.addEventListener("DOMContentLoaded",()=>Journal.showAdminLink());
