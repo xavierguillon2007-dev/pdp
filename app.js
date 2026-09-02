@@ -123,6 +123,7 @@ window.Journal = (() => {
     document.getElementById("logout").onclick=async e=>{e.preventDefault();await client.auth.signOut();location.href="index.html"};
     await loadAdminData(); await loadCategoriesEditor();
     document.getElementById("articleForm").addEventListener("submit",saveArticle);
+    setupRichEditor();
     document.getElementById("cover").addEventListener("change",e=>{const f=e.target.files[0];if(f)document.getElementById("coverPreview").innerHTML=`<img src="${URL.createObjectURL(f)}" alt="">`});
   }
   async function loadCategoriesEditor(){
@@ -163,6 +164,95 @@ window.Journal = (() => {
     return blob;
   }
 
+  function setupRichEditor(){
+    const editor=document.getElementById("contentEditor");
+    if(!editor || editor.dataset.ready) return;
+    editor.dataset.ready="1";
+    const wrap=document.getElementById("richEditorWrap");
+    wrap.querySelectorAll("[data-command]").forEach(btn=>btn.addEventListener("mousedown",e=>e.preventDefault()));
+    wrap.querySelectorAll("[data-command]").forEach(btn=>btn.addEventListener("click",()=>{
+      editor.focus(); document.execCommand(btn.dataset.command,false,null); syncEditorSource();
+    }));
+    document.getElementById("formatBlock").addEventListener("change",e=>{
+      editor.focus(); document.execCommand("formatBlock",false,e.target.value); syncEditorSource(); e.target.value="p";
+    });
+    document.getElementById("insertLink").addEventListener("mousedown",e=>e.preventDefault());
+    document.getElementById("insertLink").addEventListener("click",()=>{
+      editor.focus();
+      const url=prompt("Adresse du lien (https://...) :");
+      if(url){ document.execCommand("createLink",false,url); syncEditorSource(); }
+    });
+
+    const imageButton=document.getElementById("insertImage");
+    const imageInput=document.getElementById("inlineImageInput");
+    let savedRange=null;
+    imageButton.addEventListener("mousedown",e=>{
+      e.preventDefault();
+      const sel=window.getSelection();
+      if(sel && sel.rangeCount && editor.contains(sel.anchorNode)){
+        savedRange=sel.getRangeAt(0).cloneRange();
+      }
+    });
+    imageButton.addEventListener("click",()=>imageInput.click());
+    imageInput.addEventListener("change",async()=>{
+      const file=imageInput.files[0];
+      imageInput.value="";
+      if(!file)return;
+      try{
+        const caption=prompt("Légende de l’image (facultatif) :","");
+        const status=document.getElementById("uploadStatus");
+        if(status) status.textContent="Compression et envoi de l’image…";
+        const compressed=await compressImage(file);
+        const path=`inline/${crypto.randomUUID()}.webp`;
+        const up=await client.storage.from("journal").upload(path,compressed,{upsert:false,contentType:"image/webp"});
+        if(up.error) throw up.error;
+        const publicUrl=client.storage.from("journal").getPublicUrl(path).data.publicUrl;
+        const figure=document.createElement("figure");
+        figure.className="article-inline-image";
+        const img=document.createElement("img");
+        img.src=publicUrl;
+        img.alt=caption || "";
+        figure.appendChild(img);
+        if(caption && caption.trim()){
+          const figcaption=document.createElement("figcaption");
+          figcaption.textContent=caption.trim();
+          figure.appendChild(figcaption);
+        }
+        editor.focus();
+        const sel=window.getSelection();
+        if(savedRange){
+          sel.removeAllRanges();
+          sel.addRange(savedRange);
+        }
+        if(sel && sel.rangeCount){
+          const range=sel.getRangeAt(0);
+          range.collapse(false);
+          range.insertNode(figure);
+          const spacer=document.createElement("p");
+          spacer.innerHTML="<br>";
+          figure.after(spacer);
+          const newRange=document.createRange();
+          newRange.setStart(spacer,0); newRange.collapse(true);
+          sel.removeAllRanges(); sel.addRange(newRange);
+        }else{
+          editor.appendChild(figure);
+        }
+        syncEditorSource();
+        if(status) status.textContent=`Image ajoutée : ${Math.round(file.size/1024)} Ko → ${Math.round(compressed.size/1024)} Ko`;
+      }catch(err){
+        alert("Impossible d’ajouter l’image : "+(err.message||err));
+        const status=document.getElementById("uploadStatus");
+        if(status) status.textContent="";
+      }
+    });
+
+    editor.addEventListener("input",syncEditorSource);
+    editor.addEventListener("paste",()=>setTimeout(syncEditorSource,0));
+  }
+  function syncEditorSource(){const editor=document.getElementById("contentEditor"),source=document.getElementById("content");if(editor&&source)source.value=editor.innerHTML;}
+  function getEditorContent(){syncEditorSource();return document.getElementById("content").value.trim();}
+  function setEditorContent(html){const editor=document.getElementById("contentEditor"),source=document.getElementById("content");if(editor)editor.innerHTML=html||"";if(source)source.value=html||"";}
+
   async function saveArticle(e){
     e.preventDefault();
     const clicked=e.submitter;
@@ -179,17 +269,17 @@ window.Journal = (() => {
       if(up.error){alert(up.error.message);if(status) status.textContent="";return}
       const pub=client.storage.from("journal").getPublicUrl(path);cover_image=pub.data.publicUrl;
     }
-    const obj={title,slug:slug(title)+"-"+Date.now(),excerpt:document.getElementById("excerpt").value,content:document.getElementById("content").value,youtube_url:document.getElementById("youtube").value||null,cover_image,category_id:document.getElementById("categoryEdit").value,status:document.getElementById("status").value,published_at:document.getElementById("publishedAt").value?new Date(document.getElementById("publishedAt").value).toISOString():new Date().toISOString()};
+    const obj={title,slug:slug(title)+"-"+Date.now(),excerpt:document.getElementById("excerpt").value,content:getEditorContent(),youtube_url:document.getElementById("youtube").value||null,cover_image,category_id:document.getElementById("categoryEdit").value,status:document.getElementById("status").value,published_at:document.getElementById("publishedAt").value?new Date(document.getElementById("publishedAt").value).toISOString():new Date().toISOString()};
     let r=id?await client.from("articles").update(obj).eq("id",id):await client.from("articles").insert(obj);
     if(r.error){alert(r.error.message);return} alert("Article enregistré."); clearEditor(); await loadAdminData();
   }
   async function editArticle(id){
     const {data,error}=await client.from("articles").select("*").eq("id",id).single(); if(error)return alert(error.message);
-    document.getElementById("articleId").value=data.id;document.getElementById("title").value=data.title;document.getElementById("excerpt").value=data.excerpt||"";document.getElementById("content").value=data.content||"";document.getElementById("youtube").value=data.youtube_url||"";document.getElementById("categoryEdit").value=data.category_id||"";document.getElementById("status").value=data.status;document.getElementById("publishedAt").value=data.published_at?new Date(data.published_at).toISOString().slice(0,16):"";
+    document.getElementById("articleId").value=data.id;document.getElementById("title").value=data.title;document.getElementById("excerpt").value=data.excerpt||"";setEditorContent(data.content||"");document.getElementById("youtube").value=data.youtube_url||"";document.getElementById("categoryEdit").value=data.category_id||"";document.getElementById("status").value=data.status;document.getElementById("publishedAt").value=data.published_at?new Date(data.published_at).toISOString().slice(0,16):"";
     document.getElementById("coverPreview").dataset.url=data.cover_image||"";document.getElementById("coverPreview").innerHTML=data.cover_image?`<img src="${esc(data.cover_image)}" alt="">`:"";document.getElementById("editorTitle").textContent="Modifier l’article";document.getElementById("editor").scrollIntoView({behavior:"smooth"});
   }
   async function deleteArticle(id){if(!confirm("Supprimer définitivement cet article ?"))return;const {error}=await client.from("articles").delete().eq("id",id);if(error)alert(error.message);else loadAdminData()}
-  function clearEditor(){document.getElementById("articleForm").reset();document.getElementById("articleId").value="";document.getElementById("coverPreview").innerHTML="";document.getElementById("coverPreview").dataset.url="";document.getElementById("editorTitle").textContent="Nouvel article"}
+  function clearEditor(){document.getElementById("articleForm").reset();document.getElementById("articleId").value="";setEditorContent("");document.getElementById("coverPreview").innerHTML="";document.getElementById("coverPreview").dataset.url="";document.getElementById("uploadStatus").textContent="";document.getElementById("editorTitle").textContent="Nouvel article"}
   return {home,listPage,readArticle,login,signup,admin,editArticle,deleteArticle,clearEditor,newArticle:clearEditor,showAdminLink};
 })();
 document.addEventListener("DOMContentLoaded",()=>Journal.showAdminLink());

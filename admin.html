@@ -10,7 +10,34 @@
 <section class="admin-card" id="editor"><div class="card-heading"><h2 id="editorTitle">Nouvel article</h2><button class="btn btn-outline" onclick="Journal.clearEditor()">Annuler</button></div>
 <form id="articleForm" class="editor-grid"><input type="hidden" id="articleId">
 <div class="editor-main"><label>Titre<input id="title" required placeholder="Le titre de votre article"></label><label>Extrait<textarea id="excerpt" rows="3" placeholder="Un court résumé…"></textarea></label>
-<label>Contenu <span class="muted">(HTML simple autorisé)</span><textarea id="content" rows="16" required placeholder="<p>Rédigez votre article ici…</p>"></textarea></label>
+<label>Contenu</label>
+<div class="rich-editor" id="richEditorWrap">
+  <div class="editor-toolbar" role="toolbar" aria-label="Mise en forme du texte">
+    <button type="button" class="tool-btn" data-command="bold" title="Gras"><b>G</b></button>
+    <button type="button" class="tool-btn" data-command="italic" title="Italique"><i>I</i></button>
+    <button type="button" class="tool-btn" data-command="underline" title="Souligné"><u>S</u></button>
+    <span class="tool-separator"></span>
+    <select class="tool-select" id="formatBlock" title="Style du paragraphe">
+      <option value="p">Texte</option><option value="h2">Titre 2</option><option value="h3">Titre 3</option><option value="blockquote">Citation</option>
+    </select>
+    <button type="button" class="tool-btn" data-command="insertUnorderedList" title="Liste à puces">• Liste</button>
+    <button type="button" class="tool-btn" data-command="insertOrderedList" title="Liste numérotée">1. Liste</button>
+    <span class="tool-separator"></span>
+    <button type="button" class="tool-btn" id="insertLink" title="Insérer un lien">🔗</button>
+    <button type="button" class="tool-btn tool-image" id="insertImage" title="Ajouter une image dans l’article">🖼️ Image</button>
+    <input type="file" id="inlineImageInput" accept="image/*" hidden>
+    <button type="button" class="tool-btn" data-command="justifyLeft" title="Aligner à gauche">≡</button>
+    <button type="button" class="tool-btn" data-command="justifyCenter" title="Centrer">≡</button>
+    <button type="button" class="tool-btn" data-command="justifyRight" title="Aligner à droite">≡</button>
+    <span class="tool-separator"></span>
+    <button type="button" class="tool-btn" data-command="removeFormat" title="Supprimer la mise en forme">Tx</button>
+    <button type="button" class="tool-btn" data-command="undo" title="Annuler">↶</button>
+    <button type="button" class="tool-btn" data-command="redo" title="Rétablir">↷</button>
+  </div>
+  <div id="contentEditor" class="content-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Commencez à écrire votre article…"></div>
+  <textarea id="content" class="editor-source" tabindex="-1" aria-hidden="true"></textarea>
+  <div class="editor-help">Écrivez comme dans Word. Sélectionnez un texte pour le mettre en <b>gras</b>, en <i>italique</i>, créer une liste, un lien ou une citation.</div>
+</div>
 <label>Vidéo YouTube <span class="muted">(facultatif)</span><input id="youtube" placeholder="https://www.youtube.com/watch?v=..."></label>
 <div class="upload-box"><b>Image de couverture</b><input id="cover" type="file" accept="image/*"><small class="muted">L’image sera automatiquement redimensionnée (max. 1800 px) et compressée en WebP avant l’envoi.</small><div id="uploadStatus" class="muted"></div><div id="coverPreview"></div></div></div>
 <aside class="editor-side"><label>Catégorie<select id="categoryEdit"></select></label><label>Statut<select id="status"><option value="draft">Brouillon</option><option value="published">Publié</option></select></label><label>Date de publication<input id="publishedAt" type="datetime-local"></label><div class="save-actions"><button class="btn btn-outline full" type="submit" data-save-status="draft">Enregistrer le brouillon</button><button class="btn btn-dark full" type="submit" data-save-status="published">Publier l’article</button></div></aside></form></section>
