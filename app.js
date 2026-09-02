@@ -102,6 +102,9 @@ window.Journal = (() => {
         const loginLinks=actions.querySelectorAll('a[href="login.html"],a[href="signup.html"]');
         const oldLogout=actions.querySelector(".logout-link");
 
+        const oldCreate=actions.querySelector(".create-article-link");
+        if(oldCreate) oldCreate.remove();
+
         if(user){
           loginLinks.forEach(x=>x.remove());
           if(!oldLogout){
@@ -122,6 +125,19 @@ window.Journal = (() => {
             });
             actions.insertBefore(logout,actions.firstChild);
           }
+
+          // Uniquement pour un administrateur connecté : accès direct à la
+          // création d'article depuis les pages publiques, sans afficher
+          // d'ancien bouton « Espace admin ».
+          isAdmin(user.id).then(admin=>{
+            if(!admin || !document.body.contains(actions)) return;
+            if(actions.querySelector(".create-article-link")) return;
+            const create=document.createElement("a");
+            create.href="admin.html#editor";
+            create.className="btn btn-dark create-article-link";
+            create.textContent="Créer un article";
+            actions.insertBefore(create,actions.firstChild);
+          });
         }else{
           if(oldLogout)oldLogout.remove();
           if(!actions.querySelector('a[href="login.html"]')){
