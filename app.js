@@ -93,34 +93,21 @@ window.Journal = (() => {
   }
   async function showAdminLink(){
     const user=await currentUser();
-    const adminLinks=document.querySelectorAll("#adminLink");
-    if(user && await isAdmin(user.id)) adminLinks.forEach(x=>x.hidden=false);
-
-    // Les pages publiques restent accessibles normalement lorsqu'on est connecté.
-    // On adapte simplement la barre de navigation pour afficher la déconnexion.
-    if(user){
-      document.querySelectorAll(".nav-actions").forEach(actions=>{
-        actions.querySelectorAll('a[href="login.html"],a[href="signup.html"]').forEach(x=>x.remove());
-        if(!actions.querySelector(".logout-link")){
-          const logout=document.createElement("a");
-          logout.href="#";
-          logout.className="btn btn-outline logout-link";
-          logout.textContent="Se déconnecter";
-          logout.addEventListener("click",async e=>{
-            e.preventDefault();
-            logout.textContent="Déconnexion…";
-            const {error}=await client.auth.signOut();
-            if(error){console.error(error);logout.textContent="Se déconnecter";return}
-            location.href="index.html";
-          });
-          actions.insertBefore(logout,actions.firstChild);
-        }
-      });
-      document.querySelectorAll('a[href="login.html"]').forEach(x=>{
-        if(x.closest(".nav-actions"))return;
-        x.textContent="Mon accès";
-      });
-    }
+    if(!user) return;
+    document.querySelectorAll(".nav-actions").forEach(actions=>{
+      actions.querySelectorAll('a[href="login.html"],a[href="signup.html"]').forEach(x=>x.remove());
+      if(!actions.querySelector(".logout-link")){
+        const logout=document.createElement("a");
+        logout.href="#"; logout.className="btn btn-outline logout-link"; logout.textContent="Se déconnecter";
+        logout.addEventListener("click",async e=>{
+          e.preventDefault(); logout.textContent="Déconnexion…";
+          const {error}=await client.auth.signOut();
+          if(error){console.error(error);logout.textContent="Se déconnecter";return}
+          location.href="index.html";
+        });
+        actions.insertBefore(logout,actions.firstChild);
+      }
+    });
   }
   function authErrorMessage(error){
     const m=String(error?.message||error||"");
@@ -140,11 +127,8 @@ window.Journal = (() => {
       if(error){msg.textContent=authErrorMessage(error);return}
       const user=data?.user;
       if(!user){msg.textContent="Connexion impossible : aucun utilisateur n’a été retourné par Supabase.";return}
-
-      // Une erreur lors de la vérification admin ne doit jamais empêcher un membre
-      // normal d'accéder au site. La page d'accueil et les articles restent publics.
       const admin=await isAdmin(user.id);
-      msg.textContent="Connexion réussie !";
+      msg.textContent=admin?"Connexion administrateur réussie !":"Connexion réussie !";
       window.location.replace(admin?"admin.html":"index.html");
     });
   }
@@ -180,14 +164,14 @@ window.Journal = (() => {
     if(!client){document.getElementById("adminMessage").textContent="Configure config.js avec les clés Supabase avant d’utiliser l’administration.";return}
     if(!(await isAdmin())){location.href="login.html";return}
     document.getElementById("logout").onclick=async e=>{e.preventDefault();await client.auth.signOut();location.href="index.html"};
-    await loadAdminData(); await loadCategoriesEditor();
+    await loadAdminData(); await loadCategoriesEditor(); await loadAccounts();
     document.getElementById("articleForm").addEventListener("submit",saveArticle);
     setupRichEditor();
     document.getElementById("cover").addEventListener("change",e=>{const f=e.target.files[0];if(f)document.getElementById("coverPreview").innerHTML=`<img src="${URL.createObjectURL(f)}" alt="">`});
   }
   async function loadCategoriesEditor(){
     const cats=await getCategories(); const s=document.getElementById("categoryEdit"); s.innerHTML=cats.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
-    document.getElementById("statCategories").textContent=cats.length;
+    const statCategories=document.getElementById("statCategories"); if(statCategories) statCategories.textContent=cats.length;
   }
   async function loadAdminData(){
     const {data,error}=await client.from("articles").select("id,title,status,published_at,category_id,categories(name)").order("created_at",{ascending:false});
@@ -195,6 +179,50 @@ window.Journal = (() => {
     const arr=data||[]; document.getElementById("statPublished").textContent=arr.filter(a=>a.status==="published").length; document.getElementById("statDrafts").textContent=arr.filter(a=>a.status==="draft").length;
     document.getElementById("adminArticles").innerHTML=arr.map(a=>`<tr><td><b>${esc(a.title)}</b></td><td>${esc(a.categories?.name||"—")}</td><td><span class="status ${a.status==="draft"?"draft":""}">${a.status==="published"?"Publié":"Brouillon"}</span></td><td>${fmt(a.published_at)}</td><td class="actions"><a class="icon-btn" href="article.html?id=${a.id}" target="_blank">Voir</a><button class="icon-btn" onclick="Journal.editArticle('${a.id}')">Modifier</button><button class="icon-btn" onclick="Journal.deleteArticle('${a.id}')">Suppr.</button></td></tr>`).join("");
   }
+  async function loadAccounts(){
+    const tbody=document.getElementById("adminAccounts");
+    if(!tbody) return;
+    const {data,error}=await client.from("member_profiles").select("user_id,first_name,last_name,email,status,created_at,updated_at").order("created_at",{ascending:false});
+    if(error){
+      tbody.innerHTML=`<tr><td colspan="6">${esc(error.message)}</td></tr>`;
+      return;
+    }
+    const rows=data||[];
+    const pending=rows.filter(x=>x.status==="pending").length;
+    const approved=rows.filter(x=>x.status==="approved").length;
+    const rejected=rows.filter(x=>x.status==="rejected").length;
+    const count=document.getElementById("statAccounts"); if(count) count.textContent=rows.length;
+    const pendingCount=document.getElementById("pendingAccountsCount"); if(pendingCount) pendingCount.textContent=pending;
+    tbody.innerHTML=rows.map(a=>{
+      const label=a.status==="approved"?"Accepté":a.status==="rejected"?"Refusé":"En attente";
+      const cls=a.status==="approved"?"":"draft";
+      return `<tr><td><b>${esc((a.first_name||"")+" "+(a.last_name||"")).trim()||"—"}</b></td><td>${esc(a.email||"—")}</td><td><span class="status ${cls}">${label}</span></td><td>${fmt(a.created_at)}</td><td class="actions"><button class="icon-btn" onclick="Journal.editAccount('${a.user_id}')">Modifier</button>${a.status!=="approved"?`<button class="icon-btn" onclick="Journal.setAccountStatus('${a.user_id}','approved')">Accepter</button>`:""}${a.status!=="rejected"?`<button class="icon-btn" onclick="Journal.setAccountStatus('${a.user_id}','rejected')">Refuser</button>`:""}${a.status!=="pending"?`<button class="icon-btn" onclick="Journal.setAccountStatus('${a.user_id}','pending')">En attente</button>`:""}<button class="icon-btn" onclick="Journal.deleteAccount('${a.user_id}')">Supprimer</button></td></tr>`;
+    }).join("");
+    const summary=document.getElementById("accountsSummary"); if(summary) summary.textContent=`${pending} en attente · ${approved} accepté(s) · ${rejected} refusé(s)`;
+  }
+  async function editAccount(userId){
+    const {data,error}=await client.from("member_profiles").select("user_id,first_name,last_name,email,status").eq("user_id",userId).single();
+    if(error){alert(error.message);return}
+    const first=prompt("Prénom :",data.first_name||""); if(first===null)return;
+    const last=prompt("Nom :",data.last_name||""); if(last===null)return;
+    const {error:updateError}=await client.from("member_profiles").update({first_name:first.trim(),last_name:last.trim(),updated_at:new Date().toISOString()}).eq("user_id",userId);
+    if(updateError){alert(updateError.message);return}
+    await loadAccounts();
+  }
+  async function setAccountStatus(userId,status){
+    const labels={approved:"accepter",rejected:"refuser",pending:"remettre en attente"};
+    if(!confirm(`Voulez-vous ${labels[status]} ce compte ?`))return;
+    const {error}=await client.from("member_profiles").update({status,updated_at:new Date().toISOString()}).eq("user_id",userId);
+    if(error){alert(error.message);return}
+    await loadAccounts();
+  }
+  async function deleteAccount(userId){
+    if(!confirm("Supprimer définitivement ce compte ? Cette action supprimera également son accès à la connexion."))return;
+    const {error}=await client.rpc("admin_delete_user",{target_user_id:userId});
+    if(error){alert(error.message);return}
+    await loadAccounts();
+  }
+
   async function compressImage(file){
     if(!file || !file.type.startsWith("image/")) throw new Error("Le fichier sélectionné n’est pas une image.");
     const MAX_DIM=1800;
@@ -339,6 +367,6 @@ window.Journal = (() => {
   }
   async function deleteArticle(id){if(!confirm("Supprimer définitivement cet article ?"))return;const {error}=await client.from("articles").delete().eq("id",id);if(error)alert(error.message);else loadAdminData()}
   function clearEditor(){document.getElementById("articleForm").reset();document.getElementById("articleId").value="";setEditorContent("");document.getElementById("coverPreview").innerHTML="";document.getElementById("coverPreview").dataset.url="";document.getElementById("uploadStatus").textContent="";document.getElementById("editorTitle").textContent="Nouvel article"}
-  return {home,listPage,readArticle,login,signup,admin,editArticle,deleteArticle,clearEditor,newArticle:clearEditor,showAdminLink};
+  return {home,listPage,readArticle,login,signup,admin,editArticle,deleteArticle,clearEditor,newArticle:clearEditor,showAdminLink,editAccount,setAccountStatus,deleteAccount};
 })();
 document.addEventListener("DOMContentLoaded",()=>Journal.showAdminLink());

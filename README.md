@@ -34,3 +34,11 @@ Le formulaire `signup.html` utilise Supabase Auth. Si la confirmation d’e-mail
 
 ## 7. Clé API
 Pour un site web, utilise la Publishable key (`sb_publishable_...`). Ne mets jamais une Secret key (`sb_secret_...`) ou une clé `service_role` dans le code du site.
+
+
+## Comptes membres et administration
+- Le même bouton « Se connecter » sert aux membres et aux administrateurs.
+- Un administrateur est détecté via `admin_users` puis envoyé vers `admin.html`; les autres comptes vont vers l'accueil.
+- Les nouveaux comptes sont enregistrés dans `member_profiles` avec le statut `pending`.
+- Les administrateurs peuvent accepter, refuser, remettre en attente, modifier le prénom/nom et supprimer définitivement un compte depuis `admin.html`.
+- Le script `supabase.sql` contient les tables, triggers, politiques RLS et la fonction de suppression nécessaires.
