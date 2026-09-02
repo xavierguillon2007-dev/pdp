@@ -64,12 +64,64 @@ window.Journal = (() => {
     const embed=yt(a.youtube_url||a.youtube);
     document.getElementById("article").innerHTML=`<div class="article-head"><span class="tag">${esc(a.categories?.name||"Actualités")}</span><h1>${esc(a.title)}</h1><div class="muted">${fmt(a.published_at)}</div></div>${a.cover_image?`<img class="article-cover" src="${esc(a.cover_image)}" alt="">`:''}<div class="article-content">${a.content||""}${embed?`<div class="youtube-wrap"><iframe src="${embed}" title="Vidéo YouTube" allowfullscreen></iframe></div>`:''}</div>`;
   }
-  async function currentUser(){ if(!client)return null; return (await client.auth.getUser()).data.user; }
-  async function isAdmin(){
-    const u=await currentUser(); if(!u)return false;
-    const {data}=await client.from("admin_users").select("user_id").eq("user_id",u.id).maybeSingle(); return !!data;
+  async function currentUser(){
+    if(!client)return null;
+    try{
+      const {data,error}=await client.auth.getUser();
+      if(error)return null;
+      return data?.user||null;
+    }catch(e){
+      console.warn("Impossible de récupérer la session :",e);
+      return null;
+    }
   }
-  async function showAdminLink(){if(await isAdmin()) document.querySelectorAll("#adminLink").forEach(x=>x.hidden=false);}
+  async function isAdmin(userId=null){
+    if(!client)return false;
+    const id=userId || (await currentUser())?.id;
+    if(!id)return false;
+    try{
+      const {data,error}=await client.from("admin_users").select("user_id").eq("user_id",id).maybeSingle();
+      if(error){
+        console.warn("Vérification du statut administrateur impossible :",error);
+        return false;
+      }
+      return !!data;
+    }catch(e){
+      console.warn("Vérification du statut administrateur impossible :",e);
+      return false;
+    }
+  }
+  async function showAdminLink(){
+    const user=await currentUser();
+    const adminLinks=document.querySelectorAll("#adminLink");
+    if(user && await isAdmin(user.id)) adminLinks.forEach(x=>x.hidden=false);
+
+    // Les pages publiques restent accessibles normalement lorsqu'on est connecté.
+    // On adapte simplement la barre de navigation pour afficher la déconnexion.
+    if(user){
+      document.querySelectorAll(".nav-actions").forEach(actions=>{
+        actions.querySelectorAll('a[href="login.html"],a[href="signup.html"]').forEach(x=>x.remove());
+        if(!actions.querySelector(".logout-link")){
+          const logout=document.createElement("a");
+          logout.href="#";
+          logout.className="btn btn-outline logout-link";
+          logout.textContent="Se déconnecter";
+          logout.addEventListener("click",async e=>{
+            e.preventDefault();
+            logout.textContent="Déconnexion…";
+            const {error}=await client.auth.signOut();
+            if(error){console.error(error);logout.textContent="Se déconnecter";return}
+            location.href="index.html";
+          });
+          actions.insertBefore(logout,actions.firstChild);
+        }
+      });
+      document.querySelectorAll('a[href="login.html"]').forEach(x=>{
+        if(x.closest(".nav-actions"))return;
+        x.textContent="Mon accès";
+      });
+    }
+  }
   function authErrorMessage(error){
     const m=String(error?.message||error||"");
     if(m.toLowerCase().includes("email not confirmed")) return "Ton adresse e-mail n’est pas encore confirmée. Vérifie ta boîte mail, puis réessaie.";
@@ -86,7 +138,14 @@ window.Journal = (() => {
       const passwordValue=document.getElementById("password").value;
       const {data,error}=await client.auth.signInWithPassword({email:emailValue,password:passwordValue});
       if(error){msg.textContent=authErrorMessage(error);return}
-      location.href=(data.user && await isAdmin())?"admin.html":"index.html";
+      const user=data?.user;
+      if(!user){msg.textContent="Connexion impossible : aucun utilisateur n’a été retourné par Supabase.";return}
+
+      // Une erreur lors de la vérification admin ne doit jamais empêcher un membre
+      // normal d'accéder au site. La page d'accueil et les articles restent publics.
+      const admin=await isAdmin(user.id);
+      msg.textContent="Connexion réussie !";
+      window.location.replace(admin?"admin.html":"index.html");
     });
   }
   async function signup(){
