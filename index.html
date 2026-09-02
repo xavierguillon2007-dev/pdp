@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Le Journal — Actualités</title>
+  <meta name="description" content="Le Journal — actualités, articles, vidéos et dossiers.">
+  <link rel="icon" href="assets/logo.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="container nav">
+    <a class="brand" href="index.html">
+      <img src="assets/logo.png" alt="Logo">
+      <div><strong>Le Journal</strong><small>L’actualité qui vous informe</small></div>
+    </a>
+    <button class="mobile-menu" aria-label="Menu">☰</button>
+    <nav>
+      <a class="active" href="index.html">Accueil</a>
+      <a href="articles.html">Actualités</a>
+      <a href="articles.html?category=all">Catégories</a>
+      <a href="#apropos">À propos</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="btn btn-outline" href="login.html">Se connecter</a>
+      <a class="btn btn-dark" id="adminLink" href="admin.html" hidden>Espace admin</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero container" id="featured"></section>
+
+  <section class="container section">
+    <div class="section-heading">
+      <div><span class="eyebrow">À découvrir</span><h2>Derniers articles</h2></div>
+      <a href="articles.html" class="text-link">Voir tous les articles →</a>
+    </div>
+    <div id="latest" class="article-grid"></div>
+    <div id="emptyState" class="empty" hidden>Aucun article publié pour le moment.</div>
+  </section>
+
+  <section class="container section">
+    <div class="section-heading"><div><span class="eyebrow">Explorer</span><h2>Par catégorie</h2></div></div>
+    <div id="categories" class="category-grid"></div>
+  </section>
+</main>
+
+<footer id="contact">
+  <div class="container footer-grid">
+    <div>
+      <a class="brand footer-brand" href="index.html"><img src="assets/logo.png" alt=""><div><strong>Le Journal</strong><small>L’actualité qui vous informe</small></div></a>
+      <p>Un espace de lecture clair, accessible et agréable pour suivre les actualités.</p>
+    </div>
+    <div><h4>Navigation</h4><a href="index.html">Accueil</a><a href="articles.html">Actualités</a><a href="login.html">Connexion</a></div>
+    <div><h4>Informations</h4><a href="#apropos">À propos</a><a href="#">Mentions légales</a><a href="#">Confidentialité</a></div>
+    <div><h4>Newsletter</h4><p>Recevez les dernières actualités.</p><div class="newsletter"><input placeholder="Votre email"><button class="btn btn-light">S’abonner</button></div></div>
+  </div>
+  <div class="container copyright">© 2026 Le Journal. Tous droits réservés.</div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

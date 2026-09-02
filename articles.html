@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Actualités — Le Journal</title><link rel="icon" href="assets/logo.png"><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="site-header"><div class="container nav">
+<a class="brand" href="index.html"><img src="assets/logo.png"><div><strong>Le Journal</strong><small>L’actualité qui vous informe</small></div></a>
+<nav><a href="index.html">Accueil</a><a class="active" href="articles.html">Actualités</a><a href="articles.html?category=all">Catégories</a></nav>
+<div class="nav-actions"><a class="btn btn-outline" href="login.html">Se connecter</a><a class="btn btn-dark" id="adminLink" href="admin.html" hidden>Espace admin</a></div>
+</div></header>
+<main class="container page">
+<div class="page-title"><span class="eyebrow">Le Journal</span><h1>Actualités</h1><p>Trouvez les articles, dossiers et vidéos publiés par notre rédaction.</p></div>
+<div class="filters"><input id="search" class="search" placeholder="Rechercher un article…"><select id="category"><option value="">Toutes les catégories</option></select></div>
+<div id="articles" class="article-grid wide"></div><div id="empty" class="empty" hidden>Aucun résultat.</div>
+</main>
+<footer><div class="container copyright">© 2026 Le Journal. Tous droits réservés.</div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="app.js"></script>
+<script>document.addEventListener('DOMContentLoaded',()=>Journal.listPage());</script>
+</body></html>
