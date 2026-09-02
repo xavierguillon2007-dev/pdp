@@ -67,9 +67,11 @@ window.Journal = (() => {
   async function currentUser(){
     if(!client)return null;
     try{
-      const {data,error}=await client.auth.getUser();
-      if(error)return null;
-      return data?.user||null;
+      // getSession() lit la session persistée localement et évite de dépendre
+      // d'un nouvel appel réseau juste pour savoir si le visiteur est connecté.
+      const {data,error}=await client.auth.getSession();
+      if(error){console.warn("Impossible de récupérer la session :",error);return null;}
+      return data?.session?.user||null;
     }catch(e){
       console.warn("Impossible de récupérer la session :",e);
       return null;
@@ -91,23 +93,63 @@ window.Journal = (() => {
       return false;
     }
   }
-  async function showAdminLink(){
-    const user=await currentUser();
-    if(!user) return;
-    document.querySelectorAll(".nav-actions").forEach(actions=>{
-      actions.querySelectorAll('a[href="login.html"],a[href="signup.html"]').forEach(x=>x.remove());
-      if(!actions.querySelector(".logout-link")){
-        const logout=document.createElement("a");
-        logout.href="#"; logout.className="btn btn-outline logout-link"; logout.textContent="Se déconnecter";
-        logout.addEventListener("click",async e=>{
-          e.preventDefault(); logout.textContent="Déconnexion…";
-          const {error}=await client.auth.signOut();
-          if(error){console.error(error);logout.textContent="Se déconnecter";return}
-          location.href="index.html";
-        });
-        actions.insertBefore(logout,actions.firstChild);
-      }
+
+  function installAuthUI(){
+    if(!client)return;
+    const apply=async(session)=>{
+      const user=session?.user||null;
+      document.querySelectorAll(".nav-actions").forEach(actions=>{
+        const loginLinks=actions.querySelectorAll('a[href="login.html"],a[href="signup.html"]');
+        const oldLogout=actions.querySelector(".logout-link");
+
+        if(user){
+          loginLinks.forEach(x=>x.remove());
+          if(!oldLogout){
+            const logout=document.createElement("a");
+            logout.href="#";
+            logout.className="btn btn-outline logout-link";
+            logout.textContent="Se déconnecter";
+            logout.addEventListener("click",async e=>{
+              e.preventDefault();
+              logout.textContent="Déconnexion…";
+              const {error}=await client.auth.signOut();
+              if(error){
+                console.error(error);
+                logout.textContent="Se déconnecter";
+                return;
+              }
+              location.href="index.html";
+            });
+            actions.insertBefore(logout,actions.firstChild);
+          }
+        }else{
+          if(oldLogout)oldLogout.remove();
+          if(!actions.querySelector('a[href="login.html"]')){
+            const login=document.createElement("a");
+            login.className="btn btn-outline";
+            login.href="login.html";
+            login.textContent="Se connecter";
+            actions.insertBefore(login,actions.firstChild);
+          }
+        }
+      });
+    };
+
+    // Affichage immédiat à partir de la session locale.
+    client.auth.getSession().then(({data})=>apply(data?.session||null));
+
+    // Puis synchronisation automatique après connexion, déconnexion ou
+    // renouvellement de session. Cela évite que la page reste affichée comme
+    // visiteur alors que Supabase considère bien l'utilisateur connecté.
+    client.auth.onAuthStateChange((_event,session)=>{
+      window.setTimeout(()=>apply(session||null),0);
     });
+  }
+
+  async function showAdminLink(){
+    // Conservé pour compatibilité avec d'anciennes pages : aucun lien
+    // « Espace admin » n'est jamais ajouté au site public.
+    installAuthUI();
   }
   function authErrorMessage(error){
     const m=String(error?.message||error||"");
@@ -120,13 +162,19 @@ window.Journal = (() => {
     const form=document.getElementById("loginForm"); if(!form)return;
     if(!client){document.getElementById("loginMsg").textContent="Configure d’abord config.js avec l’URL et la Publishable key de ton projet Supabase.";return}
     form.addEventListener("submit",async e=>{
-      e.preventDefault(); const msg=document.getElementById("loginMsg"); msg.textContent="Connexion…";
+      e.preventDefault();
+      const msg=document.getElementById("loginMsg");
+      msg.textContent="Connexion…";
       const emailValue=document.getElementById("email").value.trim();
       const passwordValue=document.getElementById("password").value;
       const {data,error}=await client.auth.signInWithPassword({email:emailValue,password:passwordValue});
       if(error){msg.textContent=authErrorMessage(error);return}
       const user=data?.user;
       if(!user){msg.textContent="Connexion impossible : aucun utilisateur n’a été retourné par Supabase.";return}
+
+      // La session est déjà persistée par Supabase. On vérifie simplement
+      // l'admin pour choisir la destination, sans empêcher un membre normal
+      // de se connecter si cette vérification rencontre momentanément une erreur.
       const admin=await isAdmin(user.id);
       msg.textContent=admin?"Connexion administrateur réussie !":"Connexion réussie !";
       window.location.replace(admin?"admin.html":"index.html");
