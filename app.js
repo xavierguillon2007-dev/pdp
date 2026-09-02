@@ -164,7 +164,9 @@ window.Journal = (() => {
   }
 
   async function saveArticle(e){
-    e.preventDefault(); const id=document.getElementById("articleId").value; const title=document.getElementById("title").value.trim();
+    e.preventDefault();
+    const clicked=e.submitter;
+    if(clicked?.dataset.saveStatus) document.getElementById("status").value=clicked.dataset.saveStatus; const id=document.getElementById("articleId").value; const title=document.getElementById("title").value.trim();
     let cover_image=document.getElementById("coverPreview").dataset.url||null; const file=document.getElementById("cover").files[0];
     if(file){
       const status=document.getElementById("uploadStatus");
