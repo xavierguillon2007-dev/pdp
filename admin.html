@@ -12,7 +12,7 @@
 <div class="editor-main"><label>Titre<input id="title" required placeholder="Le titre de votre article"></label><label>Extrait<textarea id="excerpt" rows="3" placeholder="Un court résumé…"></textarea></label>
 <label>Contenu <span class="muted">(HTML simple autorisé)</span><textarea id="content" rows="16" required placeholder="<p>Rédigez votre article ici…</p>"></textarea></label>
 <label>Vidéo YouTube <span class="muted">(facultatif)</span><input id="youtube" placeholder="https://www.youtube.com/watch?v=..."></label>
-<div class="upload-box"><b>Image de couverture</b><input id="cover" type="file" accept="image/*"><div id="coverPreview"></div></div></div>
+<div class="upload-box"><b>Image de couverture</b><input id="cover" type="file" accept="image/*"><small class="muted">L’image sera automatiquement redimensionnée (max. 1800 px) et compressée en WebP avant l’envoi.</small><div id="uploadStatus" class="muted"></div><div id="coverPreview"></div></div></div>
 <aside class="editor-side"><label>Catégorie<select id="categoryEdit"></select></label><label>Statut<select id="status"><option value="draft">Brouillon</option><option value="published">Publié</option></select></label><label>Date de publication<input id="publishedAt" type="datetime-local"></label><button class="btn btn-dark full" type="submit">Enregistrer</button></aside></form></section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="app.js"></script>

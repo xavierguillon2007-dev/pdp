@@ -135,10 +135,48 @@ window.Journal = (() => {
     const arr=data||[]; document.getElementById("statPublished").textContent=arr.filter(a=>a.status==="published").length; document.getElementById("statDrafts").textContent=arr.filter(a=>a.status==="draft").length;
     document.getElementById("adminArticles").innerHTML=arr.map(a=>`<tr><td><b>${esc(a.title)}</b></td><td>${esc(a.categories?.name||"—")}</td><td><span class="status ${a.status==="draft"?"draft":""}">${a.status==="published"?"Publié":"Brouillon"}</span></td><td>${fmt(a.published_at)}</td><td class="actions"><a class="icon-btn" href="article.html?id=${a.id}" target="_blank">Voir</a><button class="icon-btn" onclick="Journal.editArticle('${a.id}')">Modifier</button><button class="icon-btn" onclick="Journal.deleteArticle('${a.id}')">Suppr.</button></td></tr>`).join("");
   }
+  async function compressImage(file){
+    if(!file || !file.type.startsWith("image/")) throw new Error("Le fichier sélectionné n’est pas une image.");
+    const MAX_DIM=1800;
+    const TARGET_BYTES=900*1024;
+    const img=await new Promise((resolve,reject)=>{
+      const image=new Image();
+      image.onload=()=>resolve(image);
+      image.onerror=()=>reject(new Error("Impossible de lire cette image."));
+      image.src=URL.createObjectURL(file);
+    });
+    const ratio=Math.min(1,MAX_DIM/Math.max(img.naturalWidth,img.naturalHeight));
+    const canvas=document.createElement("canvas");
+    canvas.width=Math.max(1,Math.round(img.naturalWidth*ratio));
+    canvas.height=Math.max(1,Math.round(img.naturalHeight*ratio));
+    const ctx=canvas.getContext("2d");
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    URL.revokeObjectURL(img.src);
+
+    let quality=0.82;
+    let blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/webp",quality));
+    while(blob && blob.size>TARGET_BYTES && quality>0.5){
+      quality-=0.07;
+      blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/webp",quality));
+    }
+    if(!blob) throw new Error("La compression de l’image a échoué.");
+    return blob;
+  }
+
   async function saveArticle(e){
     e.preventDefault(); const id=document.getElementById("articleId").value; const title=document.getElementById("title").value.trim();
     let cover_image=document.getElementById("coverPreview").dataset.url||null; const file=document.getElementById("cover").files[0];
-    if(file){const ext=file.name.split(".").pop();const path=`covers/${crypto.randomUUID()}.${ext}`;const up=await client.storage.from("journal").upload(path,file,{upsert:false});if(up.error){alert(up.error.message);return} const pub=client.storage.from("journal").getPublicUrl(path);cover_image=pub.data.publicUrl}
+    if(file){
+      const status=document.getElementById("uploadStatus");
+      if(status) status.textContent="Compression de l’image…";
+      let compressed;
+      try{ compressed=await compressImage(file); }catch(err){ alert(err.message); if(status) status.textContent=""; return; }
+      if(status) status.textContent=`Image compressée : ${Math.round(file.size/1024)} Ko → ${Math.round(compressed.size/1024)} Ko`;
+      const path=`covers/${crypto.randomUUID()}.webp`;
+      const up=await client.storage.from("journal").upload(path,compressed,{upsert:false,contentType:"image/webp"});
+      if(up.error){alert(up.error.message);if(status) status.textContent="";return}
+      const pub=client.storage.from("journal").getPublicUrl(path);cover_image=pub.data.publicUrl;
+    }
     const obj={title,slug:slug(title)+"-"+Date.now(),excerpt:document.getElementById("excerpt").value,content:document.getElementById("content").value,youtube_url:document.getElementById("youtube").value||null,cover_image,category_id:document.getElementById("categoryEdit").value,status:document.getElementById("status").value,published_at:document.getElementById("publishedAt").value?new Date(document.getElementById("publishedAt").value).toISOString():new Date().toISOString()};
     let r=id?await client.from("articles").update(obj).eq("id",id):await client.from("articles").insert(obj);
     if(r.error){alert(r.error.message);return} alert("Article enregistré."); clearEditor(); await loadAdminData();
