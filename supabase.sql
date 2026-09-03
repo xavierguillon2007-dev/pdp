@@ -53,6 +53,7 @@ as $$
   select exists(select 1 from public.admin_users where user_id = auth.uid());
 $$;
 
+
 -- Profils membres : les comptes créés depuis le site sont suivis ici.
 create table if not exists public.member_profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -60,11 +61,32 @@ create table if not exists public.member_profiles (
   last_name text not null default '',
   email text not null default '',
   status text not null default 'pending' check (status in ('pending','approved','rejected')),
+  role text not null default 'member' check (role in ('member','writer')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
+alter table public.member_profiles add column if not exists role text not null default 'member';
+alter table public.member_profiles drop constraint if exists member_profiles_role_check;
+alter table public.member_profiles add constraint member_profiles_role_check check (role in ('member','writer'));
+
 create index if not exists member_profiles_status_idx on public.member_profiles(status, created_at desc);
+create index if not exists member_profiles_role_idx on public.member_profiles(role);
+
+-- Les administrateurs sont automatiquement considérés comme rédacteurs.
+create or replace function public.is_writer()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.is_admin()
+  or exists(
+    select 1 from public.member_profiles
+    where user_id = auth.uid() and status = 'approved' and role = 'writer'
+  );
+$$;
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -155,17 +177,24 @@ drop policy if exists "published articles public read" on public.articles;
 create policy "published articles public read" on public.articles
 for select to anon, authenticated using (status = 'published' or public.is_admin());
 
+drop policy if exists "writers read all articles" on public.articles;
+create policy "writers read all articles" on public.articles
+for select to authenticated using (public.is_writer());
+
 drop policy if exists "admins insert articles" on public.articles;
-create policy "admins insert articles" on public.articles
-for insert to authenticated with check (public.is_admin());
+drop policy if exists "writers insert articles" on public.articles;
+create policy "writers insert articles" on public.articles
+for insert to authenticated with check (public.is_writer());
 
 drop policy if exists "admins update articles" on public.articles;
-create policy "admins update articles" on public.articles
-for update to authenticated using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "writers update articles" on public.articles;
+create policy "writers update articles" on public.articles
+for update to authenticated using (public.is_writer()) with check (public.is_writer());
 
 drop policy if exists "admins delete articles" on public.articles;
-create policy "admins delete articles" on public.articles
-for delete to authenticated using (public.is_admin());
+drop policy if exists "writers delete articles" on public.articles;
+create policy "writers delete articles" on public.articles
+for delete to authenticated using (public.is_writer());
 
 -- Storage : crée d'abord un bucket public nommé "journal" dans
 -- Storage > New bucket si ton projet ne permet pas l'insert ci-dessous.
@@ -178,24 +207,27 @@ create policy "journal public read" on storage.objects
 for select using (bucket_id='journal');
 
 drop policy if exists "journal admin upload" on storage.objects;
-create policy "journal admin upload" on storage.objects
-for insert to authenticated with check (bucket_id='journal' and public.is_admin());
+drop policy if exists "journal writer upload" on storage.objects;
+create policy "journal writer upload" on storage.objects
+for insert to authenticated with check (bucket_id='journal' and public.is_writer());
 
 drop policy if exists "journal admin update" on storage.objects;
-create policy "journal admin update" on storage.objects
-for update to authenticated using (bucket_id='journal' and public.is_admin()) with check (bucket_id='journal' and public.is_admin());
+drop policy if exists "journal writer update" on storage.objects;
+create policy "journal writer update" on storage.objects
+for update to authenticated using (bucket_id='journal' and public.is_writer()) with check (bucket_id='journal' and public.is_writer());
 
 drop policy if exists "journal admin delete" on storage.objects;
-create policy "journal admin delete" on storage.objects
-for delete to authenticated using (bucket_id='journal' and public.is_admin());
+drop policy if exists "journal writer delete" on storage.objects;
+create policy "journal writer delete" on storage.objects
+for delete to authenticated using (bucket_id='journal' and public.is_writer());
 
 -- Après avoir créé ton premier compte avec Supabase Auth,
 -- récupère son UUID et exécute :
 -- insert into public.admin_users(user_id) values ('UUID-DU-COMPTE-ADMIN');
 
 -- Rattrapage des comptes déjà existants avant l'installation de ce système.
-insert into public.member_profiles(user_id, first_name, last_name, email, status)
-select id, coalesce(raw_user_meta_data->>'first_name',''), coalesce(raw_user_meta_data->>'last_name',''), coalesce(email,''), 'pending'
+insert into public.member_profiles(user_id, first_name, last_name, email, status, role)
+select id, coalesce(raw_user_meta_data->>'first_name',''), coalesce(raw_user_meta_data->>'last_name',''), coalesce(email,''), 'pending', 'member'
 from auth.users
 on conflict (user_id) do update set
   first_name=excluded.first_name, last_name=excluded.last_name, email=excluded.email, updated_at=now();

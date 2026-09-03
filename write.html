@@ -1,13 +1,9 @@
 <!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Administration — Pen-Seurs de Plaies</title><link rel="icon" href="assets/logo.png"><link rel="stylesheet" href="styles.css"></head>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Écrire un article — Pen-Seurs de Plaies</title><link rel="icon" href="assets/logo.png"><link rel="stylesheet" href="styles.css"></head>
 <body class="admin-body">
-<aside class="admin-sidebar"><a class="brand admin-brand" href="index.html"><img src="assets/logo.png"><div><strong>Pen-Seurs de Plaies</strong><small>Administration</small></div></a>
-<a class="side-link active" href="admin.html">⌂ Tableau de bord</a><a class="side-link" href="#articles">▤ Articles</a><a class="side-link" href="#editor">✎ Nouvel article</a><a class="side-link" href="#categories">◫ Catégories</a><a class="side-link" href="#accounts">♙ Comptes</a><a class="side-link" href="#media">▣ Médias</a><a class="side-link" href="#" id="logout">↪ Déconnexion</a></aside>
-<main class="admin-main"><div class="admin-top"><div><span class="eyebrow">Administration</span><h1>Tableau de bord</h1></div><a class="btn btn-dark" href="#editor">+ Nouvel article</a></div>
-<div id="adminMessage" class="form-msg"></div>
-<section class="stats"><div class="stat"><span>Articles publiés</span><b id="statPublished">—</b></div><div class="stat"><span>Brouillons</span><b id="statDrafts">—</b></div><div class="stat"><span>Comptes</span><b id="statAccounts">—</b></div></section>
-<section class="admin-card" id="articles"><div class="card-heading"><h2>Articles</h2><button class="btn btn-dark" onclick="Journal.newArticle()">+ Nouvel article</button></div><div class="table-wrap"><table><thead><tr><th>Titre</th><th>Catégorie</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead><tbody id="adminArticles"></tbody></table></div></section>
-<section class="admin-card" id="accounts"><div class="card-heading"><div><h2>Organisation des comptes</h2><div id="accountsSummary" class="muted">—</div></div><span class="status draft" id="pendingAccountsCount">0</span></div><p class="muted">Acceptez, refusez, modifiez ou supprimez les comptes membres. Attribuez le rôle Rédacteur aux membres approuvés qui peuvent écrire et publier directement.</p><div class="table-wrap"><table><thead><tr><th>Nom</th><th>E-mail</th><th>Statut</th><th>Rôle</th><th>Créé le</th><th>Actions</th></tr></thead><tbody id="adminAccounts"></tbody></table></div></section>
+<main class="admin-main" style="max-width:1200px;margin:0 auto"><div class="admin-top"><div><span class="eyebrow">Rédaction</span><h1>Écrire un article</h1><p class="muted">Les rédacteurs peuvent publier directement leurs articles.</p></div><a class="btn btn-outline" href="index.html">← Retour au journal</a></div>
+<div id="writerMessage" class="form-msg"></div>
+<section class="admin-card" id="writerArticleList"><div class="card-heading"><div><h2>Mes articles</h2><p class="muted">Créez, modifiez et publiez directement vos articles.</p></div><button class="btn btn-dark" onclick="Journal.newArticle()">+ Nouvel article</button></div><div class="table-wrap"><table><thead><tr><th>Titre</th><th>Catégorie</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead><tbody id="writerArticles"></tbody></table></div></section>
 <section class="admin-card" id="editor"><div class="card-heading"><h2 id="editorTitle">Nouvel article</h2><button class="btn btn-outline" onclick="Journal.clearEditor()">Annuler</button></div>
 <form id="articleForm" class="editor-grid"><input type="hidden" id="articleId">
 <div class="editor-main"><label>Titre<input id="title" required placeholder="Le titre de votre article"></label><label>Extrait<textarea id="excerpt" rows="3" placeholder="Un court résumé…"></textarea></label>
@@ -44,5 +40,5 @@
 <aside class="editor-side"><label>Catégorie<select id="categoryEdit"></select></label><label>Statut<select id="status"><option value="draft">Brouillon</option><option value="published">Publié</option></select></label><label>Date de publication<input id="publishedAt" type="datetime-local"></label><div class="save-actions"><button class="btn btn-outline full" type="submit" data-save-status="draft">Enregistrer le brouillon</button><button class="btn btn-dark full" type="submit" data-save-status="published">Publier l’article</button></div></aside></form></section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="app.js"></script>
-<script>document.addEventListener('DOMContentLoaded',()=>Journal.admin());</script>
+<script>document.addEventListener('DOMContentLoaded',()=>Journal.writer());</script>
 </body></html>

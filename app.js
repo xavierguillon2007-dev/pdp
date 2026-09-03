@@ -83,16 +83,21 @@ window.Journal = (() => {
     if(!id)return false;
     try{
       const {data,error}=await client.from("admin_users").select("user_id").eq("user_id",id).maybeSingle();
-      if(error){
-        console.warn("Vérification du statut administrateur impossible :",error);
-        return false;
-      }
+      if(error){console.warn("Vérification du statut administrateur impossible :",error);return false;}
       return !!data;
-    }catch(e){
-      console.warn("Vérification du statut administrateur impossible :",e);
-      return false;
-    }
+    }catch(e){console.warn("Vérification du statut administrateur impossible :",e);return false;}
   }
+  async function isWriter(userId=null){
+    const id=userId || (await currentUser())?.id;
+    if(!id || !client)return false;
+    if(await isAdmin(id)) return true;
+    try{
+      const {data,error}=await client.from("member_profiles").select("role,status").eq("user_id",id).maybeSingle();
+      if(error){console.warn("Vérification du rôle rédacteur impossible :",error);return false;}
+      return data?.status === "approved" && data?.role === "writer";
+    }catch(e){console.warn("Vérification du rôle rédacteur impossible :",e);return false;}
+  }
+
 
   function installAuthUI(){
     if(!client)return;
@@ -126,17 +131,16 @@ window.Journal = (() => {
             actions.insertBefore(logout,actions.firstChild);
           }
 
-          // Tout utilisateur connecté peut voir l'accès à la création
-          // d'article depuis les pages publiques. L'accès aux fonctions
-          // d'administration et l'enregistrement restent protégés côté
-          // Supabase par les droits administrateur.
+          // Seuls les rédacteurs et les administrateurs voient l'accès à l'écriture.
           if(!document.body.contains(actions)) return;
-          if(actions.querySelector(".create-article-link")) return;
-          const create=document.createElement("a");
-          create.href="admin.html#editor";
-          create.className="btn btn-dark create-article-link";
-          create.textContent="Créer un article";
-          actions.insertBefore(create,actions.firstChild);
+          isWriter(user.id).then(writer=>{
+            if(!writer || actions.querySelector(".create-article-link")) return;
+            const create=document.createElement("a");
+            create.href="write.html";
+            create.className="btn btn-dark create-article-link";
+            create.textContent="Créer un article";
+            actions.insertBefore(create,actions.firstChild);
+          });
         }else{
           if(oldLogout)oldLogout.remove();
           if(!actions.querySelector('a[href="login.html"]')){
@@ -231,6 +235,28 @@ window.Journal = (() => {
     setupRichEditor();
     document.getElementById("cover").addEventListener("change",e=>{const f=e.target.files[0];if(f)document.getElementById("coverPreview").innerHTML=`<img src="${URL.createObjectURL(f)}" alt="">`});
   }
+  async function writer(){
+    if(!client){const m=document.getElementById("writerMessage");if(m)m.textContent="Configure config.js avec les clés Supabase avant d’utiliser l’écriture.";return}
+    if(!(await isWriter())){location.href="login.html";return}
+    const form=document.getElementById("articleForm");
+    if(!form)return;
+    await loadCategoriesEditor();
+    await loadWriterArticles();
+    form.addEventListener("submit",saveArticle);
+    setupRichEditor();
+    const cover=document.getElementById("cover");
+    if(cover) cover.addEventListener("change",e=>{const f=e.target.files[0];if(f)document.getElementById("coverPreview").innerHTML=`<img src="${URL.createObjectURL(f)}" alt="">`});
+    const id=new URLSearchParams(location.search).get("id");
+    if(id) await editArticle(id);
+  }
+  async function loadWriterArticles(){
+    const tbody=document.getElementById("writerArticles");
+    if(!tbody)return;
+    const {data,error}=await client.from("articles").select("id,title,status,published_at,categories(name)").order("created_at",{ascending:false});
+    if(error){tbody.innerHTML=`<tr><td colspan="5">${esc(error.message)}</td></tr>`;return}
+    const arr=data||[];
+    tbody.innerHTML=arr.map(x=>`<tr><td><b>${esc(x.title)}</b></td><td>${esc(x.categories?.name||"—")}</td><td><span class="status ${x.status==="draft"?"draft":""}">${x.status==="published"?"Publié":"Brouillon"}</span></td><td>${fmt(x.published_at)}</td><td class="actions"><a class="icon-btn" href="article.html?id=${x.id}" target="_blank">Voir</a><button class="icon-btn" onclick="Journal.editArticle('${x.id}')">Modifier</button></td></tr>`).join("") || `<tr><td colspan="5">Aucun article pour le moment.</td></tr>`;
+  }
   async function loadCategoriesEditor(){
     const cats=await getCategories(); const s=document.getElementById("categoryEdit"); s.innerHTML=cats.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
     const statCategories=document.getElementById("statCategories"); if(statCategories) statCategories.textContent=cats.length;
@@ -244,7 +270,7 @@ window.Journal = (() => {
   async function loadAccounts(){
     const tbody=document.getElementById("adminAccounts");
     if(!tbody) return;
-    const {data,error}=await client.from("member_profiles").select("user_id,first_name,last_name,email,status,created_at,updated_at").order("created_at",{ascending:false});
+    const {data,error}=await client.from("member_profiles").select("user_id,first_name,last_name,email,status,role,created_at,updated_at").order("created_at",{ascending:false});
     if(error){
       tbody.innerHTML=`<tr><td colspan="6">${esc(error.message)}</td></tr>`;
       return;
@@ -258,7 +284,7 @@ window.Journal = (() => {
     tbody.innerHTML=rows.map(a=>{
       const label=a.status==="approved"?"Accepté":a.status==="rejected"?"Refusé":"En attente";
       const cls=a.status==="approved"?"":"draft";
-      return `<tr><td><b>${esc((a.first_name||"")+" "+(a.last_name||"")).trim()||"—"}</b></td><td>${esc(a.email||"—")}</td><td><span class="status ${cls}">${label}</span></td><td>${fmt(a.created_at)}</td><td class="actions"><button class="icon-btn" onclick="Journal.editAccount('${a.user_id}')">Modifier</button>${a.status!=="approved"?`<button class="icon-btn" onclick="Journal.setAccountStatus('${a.user_id}','approved')">Accepter</button>`:""}${a.status!=="rejected"?`<button class="icon-btn" onclick="Journal.setAccountStatus('${a.user_id}','rejected')">Refuser</button>`:""}${a.status!=="pending"?`<button class="icon-btn" onclick="Journal.setAccountStatus('${a.user_id}','pending')">En attente</button>`:""}<button class="icon-btn" onclick="Journal.deleteAccount('${a.user_id}')">Supprimer</button></td></tr>`;
+      return `<tr><td><b>${esc((a.first_name||"")+" "+(a.last_name||"")).trim()||"—"}</b></td><td>${esc(a.email||"—")}</td><td><span class="status ${cls}">${label}</span></td><td><select class="role-select" onchange="Journal.setAccountRole('${a.user_id}',this.value)" ${a.status!=="approved"?"disabled":""}><option value="member" ${a.role!=="writer"?"selected":""}>Membre</option><option value="writer" ${a.role==="writer"?"selected":""}>Rédacteur</option></select></td><td>${fmt(a.created_at)}</td><td class="actions"><button class="icon-btn" onclick="Journal.editAccount('${a.user_id}')">Modifier</button>${a.status!=="approved"?`<button class="icon-btn" onclick="Journal.setAccountStatus('${a.user_id}','approved')">Accepter</button>`:""}${a.status!=="rejected"?`<button class="icon-btn" onclick="Journal.setAccountStatus('${a.user_id}','rejected')">Refuser</button>`:""}${a.status!=="pending"?`<button class="icon-btn" onclick="Journal.setAccountStatus('${a.user_id}','pending')">En attente</button>`:""}<button class="icon-btn" onclick="Journal.deleteAccount('${a.user_id}')">Supprimer</button></td></tr>`;
     }).join("");
     const summary=document.getElementById("accountsSummary"); if(summary) summary.textContent=`${pending} en attente · ${approved} accepté(s) · ${rejected} refusé(s)`;
   }
@@ -277,6 +303,14 @@ window.Journal = (() => {
     const {error}=await client.from("member_profiles").update({status,updated_at:new Date().toISOString()}).eq("user_id",userId);
     if(error){alert(error.message);return}
     await loadAccounts();
+  }
+  async function setAccountRole(userId,role){
+    if(role!=="member" && role!=="writer") return;
+    const {data,error}=await client.from("member_profiles").select("status").eq("user_id",userId).single();
+    if(error){alert(error.message);return}
+    if(data.status!=="approved") return;
+    const r=await client.from("member_profiles").update({role,updated_at:new Date().toISOString()}).eq("user_id",userId);
+    if(r.error) alert(r.error.message); else await loadAccounts();
   }
   async function deleteAccount(userId){
     if(!confirm("Supprimer définitivement ce compte ? Cette action supprimera également son accès à la connexion."))return;
@@ -419,8 +453,9 @@ window.Journal = (() => {
       const pub=client.storage.from("journal").getPublicUrl(path);cover_image=pub.data.publicUrl;
     }
     const obj={title,slug:slug(title)+"-"+Date.now(),excerpt:document.getElementById("excerpt").value,content:getEditorContent(),youtube_url:document.getElementById("youtube").value||null,cover_image,category_id:document.getElementById("categoryEdit").value,status:document.getElementById("status").value,published_at:document.getElementById("publishedAt").value?new Date(document.getElementById("publishedAt").value).toISOString():new Date().toISOString()};
+    if(!id){ const u=await currentUser(); if(u) obj.author_id=u.id; }
     let r=id?await client.from("articles").update(obj).eq("id",id):await client.from("articles").insert(obj);
-    if(r.error){alert(r.error.message);return} alert("Article enregistré."); clearEditor(); await loadAdminData();
+    if(r.error){alert(r.error.message);return} alert("Article enregistré."); clearEditor(); if(document.getElementById("adminArticles")) await loadAdminData(); if(document.getElementById("writerArticles")) await loadWriterArticles();
   }
   async function editArticle(id){
     const {data,error}=await client.from("articles").select("*").eq("id",id).single(); if(error)return alert(error.message);
@@ -429,6 +464,6 @@ window.Journal = (() => {
   }
   async function deleteArticle(id){if(!confirm("Supprimer définitivement cet article ?"))return;const {error}=await client.from("articles").delete().eq("id",id);if(error)alert(error.message);else loadAdminData()}
   function clearEditor(){document.getElementById("articleForm").reset();document.getElementById("articleId").value="";setEditorContent("");document.getElementById("coverPreview").innerHTML="";document.getElementById("coverPreview").dataset.url="";document.getElementById("uploadStatus").textContent="";document.getElementById("editorTitle").textContent="Nouvel article"}
-  return {home,listPage,readArticle,login,signup,admin,editArticle,deleteArticle,clearEditor,newArticle:clearEditor,showAdminLink,editAccount,setAccountStatus,deleteAccount};
+  return {home,listPage,readArticle,login,signup,admin,writer,editArticle,deleteArticle,clearEditor,newArticle:clearEditor,showAdminLink,editAccount,setAccountStatus,setAccountRole,deleteAccount};
 })();
 document.addEventListener("DOMContentLoaded",()=>Journal.showAdminLink());
