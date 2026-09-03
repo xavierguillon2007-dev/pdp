@@ -299,6 +299,8 @@ window.Journal = (() => {
       if(cover) cover.style.display=forum?"none":"";
       const label=document.getElementById("contentLabel");
       if(label) label.textContent=forum?"Contenu complémentaire (facultatif)":"Contenu";
+      const excerptLabel=document.getElementById("excerptLabel");
+      if(excerptLabel) excerptLabel.firstChild.textContent=forum?"Description du forum":"Extrait";
     };
     type.addEventListener("change",apply); apply();
   }
