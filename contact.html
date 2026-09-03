@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contact — Pen-Seurs de Plaies</title>
+  <meta name="description" content="Contacter l’équipe de Pen-Seurs de Plaies.">
+  <link rel="icon" href="assets/logo.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="container nav">
+    <a class="brand" href="index.html"><img src="assets/logo.png" alt="Logo"><div><strong>Pen-Seurs de Plaies</strong><small>L’éthique en journal</small></div></a>
+    <button class="mobile-menu" type="button" aria-label="Ouvrir le menu" aria-expanded="false">☰</button>
+    <nav>
+      <a href="index.html">Accueil</a><a href="articles.html">Actualités</a><a href="articles.html?category=all">Catégories</a><a href="index.html#apropos">À propos</a><a class="active" href="contact.html">Contact</a>
+    </nav>
+    <div class="nav-actions"><a class="btn btn-outline" href="login.html">Se connecter</a><a class="btn btn-dark" href="signup.html">Créer un compte</a></div>
+  </div>
+</header>
+
+<main class="container page contact-page">
+  <div class="page-title"><span class="eyebrow">Pen-Seurs de Plaies</span><h1>Nous contacter</h1><p>Une question, une remarque, une proposition d’article ? Écrivez-nous.</p></div>
+  <section class="contact-grid">
+    <div class="contact-intro">
+      <div class="contact-card highlight"><span class="contact-icon">✉</span><div><h2>Écrivez à la rédaction</h2><p>Utilisez le formulaire pour nous transmettre votre message. Nous vous répondrons dès que possible.</p></div></div>
+      <div class="contact-card"><span class="contact-icon">✦</span><div><h2>Proposer un sujet</h2><p>Vous souhaitez suggérer un thème, partager une information ou proposer un article ? Indiquez-le dans votre message.</p></div></div>
+      <div class="contact-card"><span class="contact-icon">◎</span><div><h2>La rédaction</h2><p>Pen-Seurs de Plaies est animé par une équipe éditoriale dont les membres seront présentés ici.</p></div></div>
+    </div>
+    <form class="contact-form" onsubmit="return Journal.submitContact(event)">
+      <h2>Envoyer un message</h2>
+      <label>Nom<input name="name" required autocomplete="name" placeholder="Votre nom"></label>
+      <label>E-mail<input name="email" type="email" required autocomplete="email" placeholder="votre@email.fr"></label>
+      <label>Objet<input name="subject" required placeholder="Objet de votre message"></label>
+      <label>Message<textarea name="message" rows="7" required placeholder="Votre message…"></textarea></label>
+      <button class="btn btn-dark" type="submit">Envoyer le message →</button>
+      <p id="contactMsg" class="form-msg" aria-live="polite"></p>
+    </form>
+  </section>
+</main>
+
+<footer>
+  <div class="container footer-grid">
+    <div>
+      <a class="brand footer-brand" href="index.html"><img src="assets/logo.png" alt=""><div><strong>Pen-Seurs de Plaies</strong><small>L’éthique en journal</small></div></a>
+      <p>Un espace de lecture clair, accessible et agréable pour suivre les actualités.</p>
+    </div>
+    <div><h4>Navigation</h4><a href="index.html">Accueil</a><a href="articles.html">Actualités</a><a href="contact.html">Contact</a></div>
+    <div><h4>Informations</h4><a href="index.html#apropos">À propos</a><a href="#">Mentions légales</a><a href="#">Confidentialité</a></div>
+    <div><h4>Newsletter</h4><p>Recevez les dernières actualités.</p><div class="newsletter"><input placeholder="Votre email"><button class="btn btn-light">S’abonner</button></div></div>
+  </div>
+  <div class="container copyright">© 2026 Pen-Seurs de Plaies. Tous droits réservés.</div>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="app.js"></script>
+</body></html>

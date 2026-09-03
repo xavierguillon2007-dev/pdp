@@ -464,6 +464,27 @@ window.Journal = (() => {
   }
   async function deleteArticle(id){if(!confirm("Supprimer définitivement cet article ?"))return;const {error}=await client.from("articles").delete().eq("id",id);if(error)alert(error.message);else loadAdminData()}
   function clearEditor(){document.getElementById("articleForm").reset();document.getElementById("articleId").value="";setEditorContent("");document.getElementById("coverPreview").innerHTML="";document.getElementById("coverPreview").dataset.url="";document.getElementById("uploadStatus").textContent="";document.getElementById("editorTitle").textContent="Nouvel article"}
-  return {home,listPage,readArticle,login,signup,admin,writer,editArticle,deleteArticle,clearEditor,newArticle:clearEditor,showAdminLink,editAccount,setAccountStatus,setAccountRole,deleteAccount};
+  return {home,listPage,readArticle,login,signup,admin,writer,editArticle,deleteArticle,clearEditor,newArticle:clearEditor,showAdminLink,editAccount,setAccountStatus,setAccountRole,deleteAccount,setupPublicNavigation,submitContact};
+
+  function setupPublicNavigation(){
+    document.querySelectorAll('.mobile-menu').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const header=btn.closest('.site-header'); if(!header)return;
+        const open=header.classList.toggle('mobile-nav-open');
+        btn.setAttribute('aria-expanded',String(open));
+      });
+    });
+  }
+  function submitContact(event){
+    event.preventDefault();
+    const form=event.currentTarget;
+    const name=form.name.value.trim(), email=form.email.value.trim(), subject=form.subject.value.trim(), message=form.message.value.trim();
+    const body=`Nom : ${name}\nE-mail : ${email}\n\n${message}`;
+    const target='mailto:?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+    const msg=document.getElementById('contactMsg');
+    if(msg) msg.textContent='Votre logiciel de messagerie va s’ouvrir pour envoyer le message.';
+    window.location.href=target;
+    return false;
+  }
 })();
-document.addEventListener("DOMContentLoaded",()=>Journal.showAdminLink());
+document.addEventListener("DOMContentLoaded",()=>{Journal.showAdminLink();Journal.setupPublicNavigation();});

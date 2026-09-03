@@ -11,21 +11,18 @@
 <body>
 <header class="site-header">
   <div class="container nav">
-    <a class="brand" href="index.html">
-      <img src="assets/logo.png" alt="Logo">
-      <div><strong>Pen-Seurs de Plaies</strong><small>L’éthique en journal</small></div>
-    </a>
-    <button class="mobile-menu" aria-label="Menu">☰</button>
+    <a class="brand" href="index.html"><img src="assets/logo.png" alt="Logo"><div><strong>Pen-Seurs de Plaies</strong><small>L’éthique en journal</small></div></a>
+    <button class="mobile-menu" type="button" aria-label="Ouvrir le menu" aria-expanded="false">☰</button>
     <nav>
-      <a class="active" href="index.html">Accueil</a>
-      <a href="articles.html">Actualités</a>
+      <a data-page="home" href="index.html">Accueil</a>
+      <a data-page="articles" href="articles.html">Actualités</a>
       <a href="articles.html?category=all">Catégories</a>
-      <a href="#apropos">À propos</a>
-      <a href="#contact">Contact</a>
+      <a href="index.html#apropos">À propos</a>
+      <a data-page="contact" href="contact.html">Contact</a>
     </nav>
     <div class="nav-actions">
-      <a class="btn btn-outline" href="login.html">Se connecter</a><a class="btn btn-dark" href="signup.html">Créer un compte</a>
-      
+      <a class="btn btn-outline" href="login.html">Se connecter</a>
+      <a class="btn btn-dark" href="signup.html">Créer un compte</a>
     </div>
   </div>
 </header>
@@ -48,14 +45,14 @@
   </section>
 </main>
 
-<footer id="contact">
+<footer>
   <div class="container footer-grid">
     <div>
       <a class="brand footer-brand" href="index.html"><img src="assets/logo.png" alt=""><div><strong>Pen-Seurs de Plaies</strong><small>L’éthique en journal</small></div></a>
       <p>Un espace de lecture clair, accessible et agréable pour suivre les actualités.</p>
     </div>
-    <div><h4>Navigation</h4><a href="index.html">Accueil</a><a href="articles.html">Actualités</a><a href="login.html">Connexion</a></div>
-    <div><h4>Informations</h4><a href="#apropos">À propos</a><a href="#">Mentions légales</a><a href="#">Confidentialité</a></div>
+    <div><h4>Navigation</h4><a href="index.html">Accueil</a><a href="articles.html">Actualités</a><a href="contact.html">Contact</a></div>
+    <div><h4>Informations</h4><a href="index.html#apropos">À propos</a><a href="#">Mentions légales</a><a href="#">Confidentialité</a></div>
     <div><h4>Newsletter</h4><p>Recevez les dernières actualités.</p><div class="newsletter"><input placeholder="Votre email"><button class="btn btn-light">S’abonner</button></div></div>
   </div>
   <div class="container copyright">© 2026 Pen-Seurs de Plaies. Tous droits réservés.</div>
