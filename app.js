@@ -55,6 +55,52 @@ window.Journal = (() => {
     };
     document.getElementById("search").addEventListener("input",render); select.addEventListener("change",render); render();
   }
+  const fmtCommentDate=d=>d?new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(d)):"";
+
+  async function loadComments(articleId){
+    const section=document.getElementById("commentsSection"); if(!section)return;
+    if(!client){section.hidden=false;section.innerHTML=`<div class="comments-head"><div><span class="eyebrow">Discussion</span><h2>Commentaires</h2></div><p class="muted">Configure Supabase pour activer les commentaires.</p></div>`;return}
+    const user=await currentUser();
+    const {data,error}=await client.from("article_comments").select("id,article_id,user_id,parent_id,author_name,content,created_at").eq("article_id",articleId).order("created_at",{ascending:true});
+    if(error){console.error(error);section.hidden=false;section.innerHTML=`<div class="comments-head"><div><span class="eyebrow">Discussion</span><h2>Commentaires</h2></div><p class="muted">Impossible de charger les commentaires pour le moment.</p></div>`;return}
+    const comments=data||[], byParent={};
+    comments.forEach(c=>(byParent[c.parent_id||"root"] ||= []).push(c));
+    const admin=await isAdmin(user?.id);
+    const render=(c,depth=0)=>{
+      const own=user&&c.user_id===user.id, children=(byParent[c.id]||[]).map(x=>render(x,depth+1)).join("");
+      return `<article class="comment ${depth?"comment-reply":""}" data-comment-id="${esc(c.id)}"><div class="comment-top"><strong>${esc(c.author_name||"Membre")}</strong><time class="muted">${fmtCommentDate(c.created_at)}</time></div><div class="comment-content">${esc(c.content).replace(/\n/g,"<br>")}</div><div class="comment-actions">${user?`<button type="button" class="comment-link reply-comment" data-id="${esc(c.id)}">Répondre</button>`:""}${own||admin?`<button type="button" class="comment-link delete-comment" data-id="${esc(c.id)}">${admin&&!own?"Modérer":"Supprimer"}</button>`:""}</div><div class="reply-form-wrap" id="reply-form-${esc(c.id)}"></div>${children}</article>`;
+    };
+    section.hidden=false;
+    section.innerHTML=`<div class="comments-head"><div><span class="eyebrow">Discussion</span><h2>Commentaires <span class="comment-count">${comments.length}</span></h2></div>${user?`<form id="commentForm" class="comment-form"><textarea maxlength="2000" rows="4" placeholder="Écris ton commentaire…" required></textarea><div class="comment-form-footer"><span class="muted">Connecté</span><button class="btn btn-dark" type="submit">Publier</button></div><p class="form-msg"></p></form>`:`<div class="login-comment-box"><p>Connecte-toi pour participer à la discussion.</p><a class="btn btn-outline" href="login.html">Se connecter</a></div>`}</div><div class="comments-list">${comments.filter(c=>!c.parent_id).map(c=>render(c)).join("")||`<div class="comments-empty">Aucun commentaire pour le moment. Sois le premier à réagir !</div>`}</div>`;
+    if(!user)return;
+    document.getElementById("commentForm").addEventListener("submit",e=>submitComment(e,articleId,null));
+    section.querySelectorAll(".reply-comment").forEach(btn=>btn.addEventListener("click",()=>{
+      const id=btn.dataset.id,wrap=document.getElementById(`reply-form-${id}`); if(!wrap)return;
+      if(wrap.innerHTML){wrap.innerHTML="";return}
+      wrap.innerHTML=`<form class="comment-form reply-form"><textarea maxlength="2000" rows="3" placeholder="Ta réponse…" required></textarea><div class="comment-form-footer"><button type="button" class="btn btn-outline cancel-reply">Annuler</button><button class="btn btn-dark" type="submit">Répondre</button></div><p class="form-msg"></p></form>`;
+      wrap.querySelector(".cancel-reply").onclick=()=>wrap.innerHTML="";
+      wrap.querySelector("form").addEventListener("submit",e=>submitComment(e,articleId,id));
+      wrap.querySelector("textarea").focus();
+    }));
+    section.querySelectorAll(".delete-comment").forEach(btn=>btn.addEventListener("click",()=>deleteComment(btn.dataset.id,articleId)));
+  }
+
+  async function submitComment(e,articleId,parentId){
+    e.preventDefault(); const form=e.currentTarget,textarea=form.querySelector("textarea"),msg=form.querySelector(".form-msg"),user=await currentUser();
+    if(!user){msg.textContent="Connecte-toi pour commenter.";return}
+    const content=textarea.value.trim(); if(!content){msg.textContent="Écris un commentaire avant de publier.";return}
+    msg.textContent="Publication…";
+    const {error}=await client.from("article_comments").insert({article_id:articleId,user_id:user.id,parent_id:parentId,content});
+    if(error){console.error(error);msg.textContent="Impossible de publier le commentaire.";return}
+    await loadComments(articleId);
+  }
+  async function deleteComment(id,articleId){
+    if(!confirm("Supprimer ce commentaire ?"))return;
+    const {error}=await client.from("article_comments").delete().eq("id",id);
+    if(error){console.error(error);alert("Impossible de supprimer ce commentaire.");return}
+    await loadComments(articleId);
+  }
+
   async function readArticle(){
     const id=new URLSearchParams(location.search).get("id"); let a=null;
     if(client){ const r=await client.from("articles").select("*, categories(name)").eq("id",id).single(); a=r.data; }
@@ -63,6 +109,7 @@ window.Journal = (() => {
     document.title=`${a.title} — Pen-Seurs de Plaies`;
     const embed=yt(a.youtube_url||a.youtube);
     document.getElementById("article").innerHTML=`<div class="article-head"><span class="tag">${esc(a.categories?.name||"Actualités")}</span><h1>${esc(a.title)}</h1><div class="muted">${fmt(a.published_at)}</div></div>${a.cover_image?`<img class="article-cover" src="${esc(a.cover_image)}" alt="">`:''}<div class="article-content">${a.content||""}${embed?`<div class="youtube-wrap"><iframe src="${embed}" title="Vidéo YouTube" allowfullscreen></iframe></div>`:''}</div>`;
+    await loadComments(id);
   }
   async function currentUser(){
     if(!client)return null;

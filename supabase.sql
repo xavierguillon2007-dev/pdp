@@ -231,3 +231,79 @@ select id, coalesce(raw_user_meta_data->>'first_name',''), coalesce(raw_user_met
 from auth.users
 on conflict (user_id) do update set
   first_name=excluded.first_name, last_name=excluded.last_name, email=excluded.email, updated_at=now();
+
+
+-- Commentaires et réponses : tout compte connecté peut participer,
+-- sans avoir besoin d'être approuvé.
+create table if not exists public.article_comments (
+  id uuid primary key default gen_random_uuid(),
+  article_id uuid not null references public.articles(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  parent_id uuid references public.article_comments(id) on delete cascade,
+  author_name text not null default 'Membre',
+  content text not null check (char_length(trim(content)) between 1 and 2000),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists article_comments_article_idx
+  on public.article_comments(article_id, created_at);
+create index if not exists article_comments_parent_idx
+  on public.article_comments(parent_id);
+
+create or replace function public.set_comment_author_name()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  profile_name text;
+  auth_email text;
+begin
+  select nullif(trim(concat_ws(' ', first_name, last_name)), '')
+    into profile_name
+    from public.member_profiles
+    where user_id = new.user_id;
+
+  select email into auth_email
+    from auth.users
+    where id = new.user_id;
+
+  new.author_name := coalesce(profile_name, nullif(auth_email,''), 'Membre');
+  return new;
+end;
+$$;
+
+drop trigger if exists article_comments_author_name on public.article_comments;
+create trigger article_comments_author_name
+before insert or update of user_id on public.article_comments
+for each row execute function public.set_comment_author_name();
+
+alter table public.article_comments enable row level security;
+
+drop policy if exists "comments authenticated read" on public.article_comments;
+create policy "comments authenticated read" on public.article_comments
+for select to authenticated
+using (true);
+
+drop policy if exists "comments authenticated insert own" on public.article_comments;
+create policy "comments authenticated insert own" on public.article_comments
+for insert to authenticated
+with check (
+  user_id = auth.uid()
+  and exists (
+    select 1 from public.articles a
+    where a.id = article_id and a.status = 'published'
+  )
+);
+
+drop policy if exists "comments owner update" on public.article_comments;
+create policy "comments owner update" on public.article_comments
+for update to authenticated
+using (user_id = auth.uid() or public.is_admin())
+with check (user_id = auth.uid() or public.is_admin());
+
+drop policy if exists "comments owner or admin delete" on public.article_comments;
+create policy "comments owner or admin delete" on public.article_comments
+for delete to authenticated
+using (user_id = auth.uid() or public.is_admin());
