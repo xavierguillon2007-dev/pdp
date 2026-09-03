@@ -4,11 +4,11 @@
 <header class="site-header"><div class="container nav"><a class="brand" href="index.html"><img src="assets/logo.png" alt="Logo"><div><strong>Pen-Seurs de Plaies</strong><small>L’éthique en journal</small></div></a><button class="mobile-menu" type="button" aria-label="Ouvrir le menu" aria-expanded="false">☰</button><nav><a href="index.html">Accueil</a><a href="articles.html">Actualités</a><a href="articles.html?category=all">Catégories</a><a href="index.html#apropos">À propos</a><a href="contact.html">Contact</a></nav><div class="nav-actions"><a class="btn btn-outline" href="index.html">← Retour au journal</a></div></div></header>
 <main class="writer-main container" style="max-width:1200px"><div class="admin-top"><div><span class="eyebrow">Rédaction</span><h1>Écrire un article</h1><p class="muted">Les rédacteurs peuvent publier directement leurs articles.</p></div><a class="btn btn-outline" href="index.html">← Retour au journal</a></div>
 <div id="writerMessage" class="form-msg"></div>
-<section class="admin-card" id="writerArticleList"><div class="card-heading"><div><h2>Mes articles</h2><p class="muted">Créez, modifiez et publiez directement vos articles.</p></div><button class="btn btn-dark" onclick="Journal.newArticle()">+ Nouvel article</button></div><div class="table-wrap"><table><thead><tr><th>Titre</th><th>Catégorie</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead><tbody id="writerArticles"></tbody></table></div></section>
+<section class="admin-card" id="writerArticleList"><div class="card-heading"><div><h2>Mes articles</h2><p class="muted">Créez, modifiez et publiez directement vos articles.</p></div><button class="btn btn-dark" onclick="Journal.newArticle()">+ Nouvel article</button></div><div class="table-wrap"><table><thead><tr><th>Titre</th><th>Type</th><th>Catégorie</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead><tbody id="writerArticles"></tbody></table></div></section>
 <section class="admin-card" id="editor"><div class="card-heading"><h2 id="editorTitle">Nouvel article</h2><button class="btn btn-outline" onclick="Journal.clearEditor()">Annuler</button></div>
 <form id="articleForm" class="editor-grid"><input type="hidden" id="articleId">
 <div class="editor-main"><label>Titre<input id="title" required placeholder="Le titre de votre article"></label><label>Extrait<textarea id="excerpt" rows="3" placeholder="Un court résumé…"></textarea></label>
-<label>Contenu</label>
+<label>Type de publication<select id="articleType"><option value="article">Article classique</option><option value="forum">Forum / discussion</option></select></label><label id="contentLabel">Contenu</label>
 <div class="rich-editor" id="richEditorWrap">
   <div class="editor-toolbar" role="toolbar" aria-label="Mise en forme du texte">
     <button type="button" class="tool-btn" data-command="bold" title="Gras"><b>G</b></button>
@@ -32,7 +32,7 @@
     <button type="button" class="tool-btn" data-command="undo" title="Annuler">↶</button>
     <button type="button" class="tool-btn" data-command="redo" title="Rétablir">↷</button>
   </div>
-  <div id="contentEditor" class="content-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Commencez à écrire votre article…"></div>
+  <div id="contentEditor" class="content-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Pour un forum, vous pouvez laisser ce champ vide : le titre et la description suffiront à lancer la discussion…"></div>
   <textarea id="content" class="editor-source" tabindex="-1" aria-hidden="true"></textarea>
   <div class="editor-help">Écrivez comme dans Word. Sélectionnez un texte pour le mettre en <b>gras</b>, en <i>italique</i>, créer une liste, un lien ou une citation.</div>
 </div>

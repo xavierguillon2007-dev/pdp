@@ -233,6 +233,11 @@ on conflict (user_id) do update set
   first_name=excluded.first_name, last_name=excluded.last_name, email=excluded.email, updated_at=now();
 
 
+-- Type de publication : article classique ou forum/discussion.
+alter table public.articles add column if not exists article_type text not null default 'article';
+alter table public.articles drop constraint if exists articles_article_type_check;
+alter table public.articles add constraint articles_article_type_check check (article_type in ('article','forum'));
+
 -- Commentaires et réponses : tout compte connecté peut participer,
 -- sans avoir besoin d'être approuvé.
 create table if not exists public.article_comments (

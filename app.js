@@ -31,7 +31,8 @@ window.Journal = (() => {
     return error?[]:(data||[]);
   }
   function card(a){
-    return `<article class="article-card"><a href="article.html?id=${encodeURIComponent(a.id)}"><div class="${a.cover_image?'':'no-img'}">${a.cover_image?`<img src="${esc(a.cover_image)}" alt="">`:''}</div><div class="body"><span class="tag">${esc(a.categories?.name||"Actualités")}</span><h3>${esc(a.title)}</h3><p>${esc(a.excerpt||"")}</p><div class="meta"><span>${fmt(a.published_at)}</span><span>Lire →</span></div></div></a></article>`;
+    const forum=a.article_type==="forum";
+    return `<article class="article-card ${forum?"forum-card":""}"><a href="article.html?id=${encodeURIComponent(a.id)}"><div class="${a.cover_image&&!forum?'':'no-img'}">${a.cover_image&&!forum?`<img src="${esc(a.cover_image)}" alt="">`:forum?`<div class="forum-card-mark">💬</div>`:''}</div><div class="body"><span class="tag">${forum?"Forum":esc(a.categories?.name||"Actualités")}</span><h3>${esc(a.title)}</h3><p>${esc(a.excerpt||"")}</p><div class="meta"><span>${fmt(a.published_at)}</span><span>${forum?"Participer →":"Lire →"}</span></div></div></a></article>`;
   }
   async function home(){
     const articles=await getArticles({limit:5});
@@ -108,7 +109,8 @@ window.Journal = (() => {
     if(!a){document.getElementById("article").innerHTML="<div class='empty'>Article introuvable.</div>";return}
     document.title=`${a.title} — Pen-Seurs de Plaies`;
     const embed=yt(a.youtube_url||a.youtube);
-    document.getElementById("article").innerHTML=`<div class="article-head"><span class="tag">${esc(a.categories?.name||"Actualités")}</span><h1>${esc(a.title)}</h1><div class="muted">${fmt(a.published_at)}</div></div>${a.cover_image?`<img class="article-cover" src="${esc(a.cover_image)}" alt="">`:''}<div class="article-content">${a.content||""}${embed?`<div class="youtube-wrap"><iframe src="${embed}" title="Vidéo YouTube" allowfullscreen></iframe></div>`:''}</div>`;
+    const forum=a.article_type==="forum";
+    document.getElementById("article").innerHTML=`<div class="article-head ${forum?"forum-head":""}"><span class="tag">${forum?"Forum":esc(a.categories?.name||"Actualités")}</span><h1>${esc(a.title)}</h1><div class="muted">${fmt(a.published_at)}</div>${forum?`<div class="forum-intro">${esc(a.excerpt||"")}</div>`:""}</div>${!forum&&a.cover_image?`<img class="article-cover" src="${esc(a.cover_image)}" alt="">`:''}${!forum?`<div class="article-content">${a.content||""}${embed?`<div class="youtube-wrap"><iframe src="${embed}" title="Vidéo YouTube" allowfullscreen></iframe></div>`:''}</div>`:`<div class="forum-description">${a.content||""}</div>`}`;
     await loadComments(id);
   }
   async function currentUser(){
@@ -280,8 +282,27 @@ window.Journal = (() => {
     await loadAdminData(); await loadCategoriesEditor(); await loadAccounts();
     document.getElementById("articleForm").addEventListener("submit",saveArticle);
     setupRichEditor();
+    setupArticleType();
     document.getElementById("cover").addEventListener("change",e=>{const f=e.target.files[0];if(f)document.getElementById("coverPreview").innerHTML=`<img src="${URL.createObjectURL(f)}" alt="">`});
   }
+  function setupArticleType(){
+    const type=document.getElementById("articleType");
+    if(!type)return;
+    const contentWrap=document.getElementById("richEditorWrap")?.closest("label") || document.getElementById("richEditorWrap");
+    const contentEditor=document.getElementById("richEditorWrap");
+    const youtube=document.getElementById("youtube")?.closest("label");
+    const cover=document.getElementById("cover")?.closest(".upload-box");
+    const apply=()=>{
+      const forum=type.value==="forum";
+      if(contentEditor) contentEditor.style.display=forum?"none":"";
+      if(youtube) youtube.style.display=forum?"none":"";
+      if(cover) cover.style.display=forum?"none":"";
+      const label=document.getElementById("contentLabel");
+      if(label) label.textContent=forum?"Contenu complémentaire (facultatif)":"Contenu";
+    };
+    type.addEventListener("change",apply); apply();
+  }
+
   async function writer(){
     if(!client){const m=document.getElementById("writerMessage");if(m)m.textContent="Configure config.js avec les clés Supabase avant d’utiliser l’écriture.";return}
     if(!(await isWriter())){location.href="login.html";return}
@@ -291,6 +312,7 @@ window.Journal = (() => {
     await loadWriterArticles();
     form.addEventListener("submit",saveArticle);
     setupRichEditor();
+    setupArticleType();
     const cover=document.getElementById("cover");
     if(cover) cover.addEventListener("change",e=>{const f=e.target.files[0];if(f)document.getElementById("coverPreview").innerHTML=`<img src="${URL.createObjectURL(f)}" alt="">`});
     const id=new URLSearchParams(location.search).get("id");
@@ -299,20 +321,20 @@ window.Journal = (() => {
   async function loadWriterArticles(){
     const tbody=document.getElementById("writerArticles");
     if(!tbody)return;
-    const {data,error}=await client.from("articles").select("id,title,status,published_at,categories(name)").order("created_at",{ascending:false});
-    if(error){tbody.innerHTML=`<tr><td colspan="5">${esc(error.message)}</td></tr>`;return}
+    const {data,error}=await client.from("articles").select("id,title,status,published_at,article_type,categories(name)").order("created_at",{ascending:false});
+    if(error){tbody.innerHTML=`<tr><td colspan="6">${esc(error.message)}</td></tr>`;return}
     const arr=data||[];
-    tbody.innerHTML=arr.map(x=>`<tr><td><b>${esc(x.title)}</b></td><td>${esc(x.categories?.name||"—")}</td><td><span class="status ${x.status==="draft"?"draft":""}">${x.status==="published"?"Publié":"Brouillon"}</span></td><td>${fmt(x.published_at)}</td><td class="actions"><a class="icon-btn" href="article.html?id=${x.id}" target="_blank">Voir</a><button class="icon-btn" onclick="Journal.editArticle('${x.id}')">Modifier</button></td></tr>`).join("") || `<tr><td colspan="5">Aucun article pour le moment.</td></tr>`;
+    tbody.innerHTML=arr.map(x=>`<tr><td><b>${esc(x.title)}</b></td><td>${x.article_type==="forum"?"Forum":"Article"}</td><td>${esc(x.categories?.name||"—")}</td><td><span class="status ${x.status==="draft"?"draft":""}">${x.status==="published"?"Publié":"Brouillon"}</span></td><td>${fmt(x.published_at)}</td><td class="actions"><a class="icon-btn" href="article.html?id=${x.id}" target="_blank">Voir</a><button class="icon-btn" onclick="Journal.editArticle('${x.id}')">Modifier</button></td></tr>`).join("") || `<tr><td colspan="6">Aucun article pour le moment.</td></tr>`;
   }
   async function loadCategoriesEditor(){
     const cats=await getCategories(); const s=document.getElementById("categoryEdit"); s.innerHTML=cats.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
     const statCategories=document.getElementById("statCategories"); if(statCategories) statCategories.textContent=cats.length;
   }
   async function loadAdminData(){
-    const {data,error}=await client.from("articles").select("id,title,status,published_at,category_id,categories(name)").order("created_at",{ascending:false});
+    const {data,error}=await client.from("articles").select("id,title,status,published_at,article_type,category_id,categories(name)").order("created_at",{ascending:false});
     if(error){document.getElementById("adminMessage").textContent=error.message;return}
     const arr=data||[]; document.getElementById("statPublished").textContent=arr.filter(a=>a.status==="published").length; document.getElementById("statDrafts").textContent=arr.filter(a=>a.status==="draft").length;
-    document.getElementById("adminArticles").innerHTML=arr.map(a=>`<tr><td><b>${esc(a.title)}</b></td><td>${esc(a.categories?.name||"—")}</td><td><span class="status ${a.status==="draft"?"draft":""}">${a.status==="published"?"Publié":"Brouillon"}</span></td><td>${fmt(a.published_at)}</td><td class="actions"><a class="icon-btn" href="article.html?id=${a.id}" target="_blank">Voir</a><button class="icon-btn" onclick="Journal.editArticle('${a.id}')">Modifier</button><button class="icon-btn" onclick="Journal.deleteArticle('${a.id}')">Suppr.</button></td></tr>`).join("");
+    document.getElementById("adminArticles").innerHTML=arr.map(a=>`<tr><td><b>${esc(a.title)}</b></td><td>${a.article_type==="forum"?"Forum":"Article"}</td><td>${esc(a.categories?.name||"—")}</td><td><span class="status ${a.status==="draft"?"draft":""}">${a.status==="published"?"Publié":"Brouillon"}</span></td><td>${fmt(a.published_at)}</td><td class="actions"><a class="icon-btn" href="article.html?id=${a.id}" target="_blank">Voir</a><button class="icon-btn" onclick="Journal.editArticle('${a.id}')">Modifier</button><button class="icon-btn" onclick="Journal.deleteArticle('${a.id}')">Suppr.</button></td></tr>`).join("");
   }
   async function loadAccounts(){
     const tbody=document.getElementById("adminAccounts");
@@ -499,18 +521,18 @@ window.Journal = (() => {
       if(up.error){alert(up.error.message);if(status) status.textContent="";return}
       const pub=client.storage.from("journal").getPublicUrl(path);cover_image=pub.data.publicUrl;
     }
-    const obj={title,slug:slug(title)+"-"+Date.now(),excerpt:document.getElementById("excerpt").value,content:getEditorContent(),youtube_url:document.getElementById("youtube").value||null,cover_image,category_id:document.getElementById("categoryEdit").value,status:document.getElementById("status").value,published_at:document.getElementById("publishedAt").value?new Date(document.getElementById("publishedAt").value).toISOString():new Date().toISOString()};
+    const articleType=document.getElementById("articleType")?.value||"article"; const obj={title,slug:slug(title)+"-"+Date.now(),excerpt:document.getElementById("excerpt").value,content:articleType==="forum"?"":getEditorContent(),article_type:articleType,youtube_url:articleType==="forum"?null:(document.getElementById("youtube").value||null),cover_image:articleType==="forum"?null:cover_image,category_id:document.getElementById("categoryEdit").value,status:document.getElementById("status").value,published_at:document.getElementById("publishedAt").value?new Date(document.getElementById("publishedAt").value).toISOString():new Date().toISOString()};
     if(!id){ const u=await currentUser(); if(u) obj.author_id=u.id; }
     let r=id?await client.from("articles").update(obj).eq("id",id):await client.from("articles").insert(obj);
     if(r.error){alert(r.error.message);return} alert("Article enregistré."); clearEditor(); if(document.getElementById("adminArticles")) await loadAdminData(); if(document.getElementById("writerArticles")) await loadWriterArticles();
   }
   async function editArticle(id){
     const {data,error}=await client.from("articles").select("*").eq("id",id).single(); if(error)return alert(error.message);
-    document.getElementById("articleId").value=data.id;document.getElementById("title").value=data.title;document.getElementById("excerpt").value=data.excerpt||"";setEditorContent(data.content||"");document.getElementById("youtube").value=data.youtube_url||"";document.getElementById("categoryEdit").value=data.category_id||"";document.getElementById("status").value=data.status;document.getElementById("publishedAt").value=data.published_at?new Date(data.published_at).toISOString().slice(0,16):"";
+    document.getElementById("articleId").value=data.id;document.getElementById("title").value=data.title;document.getElementById("excerpt").value=data.excerpt||"";if(document.getElementById("articleType"))document.getElementById("articleType").value=data.article_type||"article";setEditorContent(data.content||"");document.getElementById("youtube").value=data.youtube_url||"";document.getElementById("categoryEdit").value=data.category_id||"";document.getElementById("status").value=data.status;document.getElementById("publishedAt").value=data.published_at?new Date(data.published_at).toISOString().slice(0,16):"";
     document.getElementById("coverPreview").dataset.url=data.cover_image||"";document.getElementById("coverPreview").innerHTML=data.cover_image?`<img src="${esc(data.cover_image)}" alt="">`:"";document.getElementById("editorTitle").textContent="Modifier l’article";document.getElementById("editor").scrollIntoView({behavior:"smooth"});
   }
   async function deleteArticle(id){if(!confirm("Supprimer définitivement cet article ?"))return;const {error}=await client.from("articles").delete().eq("id",id);if(error)alert(error.message);else loadAdminData()}
-  function clearEditor(){document.getElementById("articleForm").reset();document.getElementById("articleId").value="";setEditorContent("");document.getElementById("coverPreview").innerHTML="";document.getElementById("coverPreview").dataset.url="";document.getElementById("uploadStatus").textContent="";document.getElementById("editorTitle").textContent="Nouvel article"}
+  function clearEditor(){document.getElementById("articleForm").reset();document.getElementById("articleId").value="";setEditorContent("");document.getElementById("articleType")?.dispatchEvent(new Event("change"));document.getElementById("coverPreview").innerHTML="";document.getElementById("coverPreview").dataset.url="";document.getElementById("uploadStatus").textContent="";document.getElementById("editorTitle").textContent="Nouvel article"}
   return {home,listPage,readArticle,login,signup,admin,writer,editArticle,deleteArticle,clearEditor,newArticle:clearEditor,showAdminLink,editAccount,setAccountStatus,setAccountRole,deleteAccount,setupPublicNavigation,submitContact};
 
   function setupPublicNavigation(){
