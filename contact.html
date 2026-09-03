@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Contact — Pen-Seurs de Plaies</title>
-  <meta name="description" content="Contacter l’équipe de Pen-Seurs de Plaies.">
+  <meta name="description" content="Contacter l’équipe de Pen-Seurs de Plaies et découvrir la rédaction.">
   <link rel="icon" href="assets/logo.png">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -21,36 +21,81 @@
 </header>
 
 <main class="container page contact-page">
-  <div class="page-title"><span class="eyebrow">Pen-Seurs de Plaies</span><h1>Nous contacter</h1><p>Une question, une remarque, une proposition d’article ? Écrivez-nous.</p></div>
-  <section class="contact-grid">
-    <div class="contact-intro">
-      <div class="contact-card highlight"><span class="contact-icon">✉</span><div><h2>Écrivez à la rédaction</h2><p>Utilisez le formulaire pour nous transmettre votre message. Nous vous répondrons dès que possible.</p></div></div>
-      <div class="contact-card"><span class="contact-icon">✦</span><div><h2>Proposer un sujet</h2><p>Vous souhaitez suggérer un thème, partager une information ou proposer un article ? Indiquez-le dans votre message.</p></div></div>
-      <div class="contact-card"><span class="contact-icon">◎</span><div><h2>La rédaction</h2><p>Pen-Seurs de Plaies est animé par une équipe éditoriale dont les membres seront présentés ici.</p></div></div>
-    </div>
-    <form class="contact-form" onsubmit="return Journal.submitContact(event)">
-      <h2>Envoyer un message</h2>
+  <div class="page-title"><span class="eyebrow">Pen-Seurs de Plaies</span><h1>Contact</h1><p>Choisissez ce que vous souhaitez nous transmettre ou découvrez celles et ceux qui font vivre le journal.</p></div>
+
+  <section class="contact-menu" aria-label="Options de contact">
+    <button class="contact-menu-card active" type="button" data-contact-tab="message" aria-expanded="true">
+      <span class="contact-icon">✉</span><span><strong>Écrire un message</strong><small>Une question, une remarque ou une demande.</small></span><span class="contact-chevron">⌄</span>
+    </button>
+    <button class="contact-menu-card" type="button" data-contact-tab="sujet" aria-expanded="false">
+      <span class="contact-icon">✦</span><span><strong>Proposer un sujet</strong><small>Une idée d’article, un thème ou une information.</small></span><span class="contact-chevron">⌄</span>
+    </button>
+    <button class="contact-menu-card" type="button" data-contact-tab="redaction" aria-expanded="false">
+      <span class="contact-icon">◎</span><span><strong>La rédaction</strong><small>Le bureau restreint et l’équipe éditoriale.</small></span><span class="contact-chevron">⌄</span>
+    </button>
+  </section>
+
+  <section class="contact-panel active" id="panel-message" data-panel="message">
+    <form class="contact-form contact-form-centered" onsubmit="return Journal.submitContact(event)">
+      <h2>Écrire un message</h2><p class="panel-intro">Votre message sera préparé dans votre logiciel de messagerie.</p>
       <label>Nom<input name="name" required autocomplete="name" placeholder="Votre nom"></label>
       <label>E-mail<input name="email" type="email" required autocomplete="email" placeholder="votre@email.fr"></label>
       <label>Objet<input name="subject" required placeholder="Objet de votre message"></label>
       <label>Message<textarea name="message" rows="7" required placeholder="Votre message…"></textarea></label>
-      <button class="btn btn-dark" type="submit">Envoyer le message →</button>
-      <p id="contactMsg" class="form-msg" aria-live="polite"></p>
+      <button class="btn btn-dark" type="submit">Envoyer le message →</button><p class="form-msg" aria-live="polite"></p>
     </form>
+  </section>
+
+  <section class="contact-panel" id="panel-sujet" data-panel="sujet" hidden>
+    <form class="contact-form contact-form-centered" onsubmit="return Journal.submitContact(event)">
+      <h2>Proposer un sujet</h2><p class="panel-intro">Vous avez une idée de sujet pour Pen-Seurs de Plaies ? Dites-nous en quelques lignes pourquoi elle mérite d’être traitée.</p>
+      <label>Nom<input name="name" required autocomplete="name" placeholder="Votre nom"></label>
+      <label>E-mail<input name="email" type="email" required autocomplete="email" placeholder="votre@email.fr"></label>
+      <label>Sujet proposé<input name="subject" required placeholder="Titre ou thème du sujet"></label>
+      <label>Votre proposition<textarea name="message" rows="8" required placeholder="Décrivez votre idée, les éléments dont vous disposez…"></textarea></label>
+      <button class="btn btn-dark" type="submit">Proposer ce sujet →</button><p class="form-msg" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <section class="contact-panel" id="panel-redaction" data-panel="redaction" hidden>
+    <div class="team-section">
+      <div class="team-heading"><span class="eyebrow">Gouvernance</span><h2>Le bureau restreint</h2><p>Les membres du bureau peuvent être contactés directement via leur fiche.</p></div>
+      <div class="team-grid">
+        <a class="team-card" href="mailto:president@pen-seurs-de-plaies.fr"><img src="assets/team/camille.svg" alt="Photo fictive de Camille Martin"><span class="team-role">Président</span><strong>Camille Martin</strong><small>Contacter le président →</small></a>
+        <a class="team-card" href="mailto:vp.general@pen-seurs-de-plaies.fr"><img src="assets/team/antoine.svg" alt="Photo fictive d’Antoine Bernard"><span class="team-role">Vice-président général</span><strong>Antoine Bernard</strong><small>Contacter le vice-président →</small></a>
+        <a class="team-card" href="mailto:tresorier@pen-seurs-de-plaies.fr"><img src="assets/team/clara.svg" alt="Photo fictive de Clara Morel"><span class="team-role">Trésorier</span><strong>Clara Morel</strong><small>Contacter la trésorière →</small></a>
+        <a class="team-card" href="mailto:secretaire1@pen-seurs-de-plaies.fr"><img src="assets/team/julien.svg" alt="Photo fictive de Julien Robert"><span class="team-role">Secrétaire</span><strong>Julien Robert</strong><small>Contacter le secrétaire →</small></a>
+        <a class="team-card" href="mailto:secretaire2@pen-seurs-de-plaies.fr"><img src="assets/team/sophie.svg" alt="Photo fictive de Sophie Laurent"><span class="team-role">Secrétaire</span><strong>Sophie Laurent</strong><small>Contacter la secrétaire →</small></a>
+      </div>
+    </div>
+
+    <div class="team-section team-editorial">
+      <div class="team-heading"><span class="eyebrow">Équipe éditoriale</span><h2>La rédaction</h2><p>Quelques profils fictifs en attendant que tu remplaces les photos, noms et liens.</p></div>
+      <div class="team-grid">
+        <a class="team-card" href="mailto:lucas@pen-seurs-de-plaies.fr"><img src="assets/team/lucas.svg" alt="Photo fictive de Lucas Petit"><span class="team-role">Rédacteur</span><strong>Lucas Petit</strong><small>Contacter →</small></a>
+        <a class="team-card" href="mailto:ines@pen-seurs-de-plaies.fr"><img src="assets/team/ines.svg" alt="Photo fictive d’Inès Roy"><span class="team-role">Rédactrice</span><strong>Inès Roy</strong><small>Contacter →</small></a>
+        <a class="team-card" href="mailto:thomas@pen-seurs-de-plaies.fr"><img src="assets/team/thomas.svg" alt="Photo fictive de Thomas Henry"><span class="team-role">Rédacteur</span><strong>Thomas Henry</strong><small>Contacter →</small></a>
+        <a class="team-card" href="mailto:emma@pen-seurs-de-plaies.fr"><img src="assets/team/emma.svg" alt="Photo fictive d’Emma Girard"><span class="team-role">Rédactrice</span><strong>Emma Girard</strong><small>Contacter →</small></a>
+        <a class="team-card" href="mailto:nathan@pen-seurs-de-plaies.fr"><img src="assets/team/nathan.svg" alt="Photo fictive de Nathan Colin"><span class="team-role">Rédacteur</span><strong>Nathan Colin</strong><small>Contacter →</small></a>
+      </div>
+    </div>
   </section>
 </main>
 
 <footer>
   <div class="container footer-grid">
-    <div>
-      <a class="brand footer-brand" href="index.html"><img src="assets/logo.png" alt=""><div><strong>Pen-Seurs de Plaies</strong><small>L’éthique en journal</small></div></a>
-      <p>Un espace de lecture clair, accessible et agréable pour suivre les actualités.</p>
-    </div>
+    <div><a class="brand footer-brand" href="index.html"><img src="assets/logo.png" alt=""><div><strong>Pen-Seurs de Plaies</strong><small>L’éthique en journal</small></div></a><p>Un espace de lecture clair, accessible et agréable pour suivre les actualités.</p></div>
     <div><h4>Navigation</h4><a href="index.html">Accueil</a><a href="articles.html">Actualités</a><a href="contact.html">Contact</a></div>
     <div><h4>Informations</h4><a href="index.html#apropos">À propos</a><a href="#">Mentions légales</a><a href="#">Confidentialité</a></div>
     <div><h4>Newsletter</h4><p>Recevez les dernières actualités.</p><div class="newsletter"><input placeholder="Votre email"><button class="btn btn-light">S’abonner</button></div></div>
-  </div>
-  <div class="container copyright">© 2026 Pen-Seurs de Plaies. Tous droits réservés.</div>
+  </div><div class="container copyright">© 2026 Pen-Seurs de Plaies. Tous droits réservés.</div>
 </footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="app.js"></script>
+<script>
+document.querySelectorAll('[data-contact-tab]').forEach(button=>button.addEventListener('click',()=>{
+  const target=button.dataset.contactTab;
+  document.querySelectorAll('[data-contact-tab]').forEach(b=>{const active=b.dataset.contactTab===target;b.classList.toggle('active',active);b.setAttribute('aria-expanded',String(active));});
+  document.querySelectorAll('[data-panel]').forEach(panel=>{const active=panel.dataset.panel===target;panel.hidden=!active;panel.classList.toggle('active',active);});
+}));
+</script>
 </body></html>
