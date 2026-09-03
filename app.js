@@ -126,18 +126,17 @@ window.Journal = (() => {
             actions.insertBefore(logout,actions.firstChild);
           }
 
-          // Uniquement pour un administrateur connecté : accès direct à la
-          // création d'article depuis les pages publiques, sans afficher
-          // d'ancien bouton « Espace admin ».
-          isAdmin(user.id).then(admin=>{
-            if(!admin || !document.body.contains(actions)) return;
-            if(actions.querySelector(".create-article-link")) return;
-            const create=document.createElement("a");
-            create.href="admin.html#editor";
-            create.className="btn btn-dark create-article-link";
-            create.textContent="Créer un article";
-            actions.insertBefore(create,actions.firstChild);
-          });
+          // Tout utilisateur connecté peut voir l'accès à la création
+          // d'article depuis les pages publiques. L'accès aux fonctions
+          // d'administration et l'enregistrement restent protégés côté
+          // Supabase par les droits administrateur.
+          if(!document.body.contains(actions)) return;
+          if(actions.querySelector(".create-article-link")) return;
+          const create=document.createElement("a");
+          create.href="admin.html#editor";
+          create.className="btn btn-dark create-article-link";
+          create.textContent="Créer un article";
+          actions.insertBefore(create,actions.firstChild);
         }else{
           if(oldLogout)oldLogout.remove();
           if(!actions.querySelector('a[href="login.html"]')){
@@ -210,8 +209,7 @@ window.Journal = (() => {
       const {data,error}=await client.auth.signUp({
         email:emailValue, password,
         options:{
-          data:{first_name:firstName,last_name:lastName},
-          emailRedirectTo:`${location.origin}/login.html`
+          data:{first_name:firstName,last_name:lastName}
         }
       });
       if(error){msg.textContent=authErrorMessage(error);return}
@@ -219,7 +217,7 @@ window.Journal = (() => {
         msg.textContent="Compte créé ! Redirection…";
         location.href="index.html";
       }else{
-        msg.textContent="Compte créé ! Vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi.";
+        msg.textContent="Compte créé ! Tu peux maintenant te connecter.";
         form.reset();
       }
     });
